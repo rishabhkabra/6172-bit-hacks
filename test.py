@@ -75,12 +75,15 @@ def test_project1(binary):
     num_failed = 0
     test_index_total = 0
     for filename in test_files:
+      testfileNameBegin = len(filename) - filename[::-1].index('/')
+      if filename[testfileNameBegin] == '.':
+        print "Skipping file beginning with '.'"
+        continue
       done_testing = False
       test_index = 0
       while not done_testing:
         with open(os.devnull) as null:
-            proc = subprocess.Popen([binary, '-n', str(-1),
-                                     '-t', filename],
+            proc = subprocess.Popen([binary, '-t', filename],
                                     stdout=null, stderr=subprocess.PIPE)
             (timed_out, lines) = wait_for_test_process(proc, 30.0)
 
@@ -120,6 +123,7 @@ def test_project1(binary):
             num_failed += 1
         elif proc.returncode != 0:
             print 'Nonzero return code.'
+            done_testing = True
             test_index += 1
             num_failed += 1
 
