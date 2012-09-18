@@ -174,6 +174,19 @@ void bitarray_set(bitarray_t *const bitarray,
            (value ? bitmask(bit_index) : 0);
 }
 
+static void bitarray_reverse(bitarray_t * bitarray_start,
+                             const size_t bitarray_length) {
+  bitarray_t * bitarray_end = bitarray_start + bitarray_length - 1;
+  bitarray_t * temp;
+  while(bitarray_start < bitarray_end) {
+    *temp = *bitarray_start;
+    *bitarray_start = *bitarray_end;
+    *bitarray_end = *temp;
+    bitarray_start++;
+    bitarray_end--;
+  }
+}
+
 void bitarray_rotate(bitarray_t *const bitarray,
                      const size_t bit_offset,
                      const size_t bit_length,
