@@ -174,23 +174,73 @@ void bitarray_set(bitarray_t *const bitarray,
            (value ? bitmask(bit_index) : 0);
 }
 
-static void bitarray_reverse(bitarray_t * bitarray_start,
-                             const size_t bitarray_length) {
-  bitarray_t * bitarray_end = bitarray_start + bitarray_length - 1;
-  bitarray_t * temp;
-  while(bitarray_start < bitarray_end) {
-    *temp = *bitarray_start;
-    *bitarray_start = *bitarray_end;
-    *bitarray_end = *temp;
-    bitarray_start++;
-    bitarray_end--;
+static void bitarray_reverse(bitarray_t * bitarray, size_t bit_offset, const size_t bit_length) {
+  // Reverses the array of length bitarray_length beginning
+  // at bitarray_start. Assumes bitarray_start + bitarray_length - 1
+  // is the address to the last of element of the to-be-reversed array.
+
+  //printf("bitarray_reverse() is being called.\n");
+  //printf("bitarray_start: %p\n", bitarray_start);
+  //printf("bitarray_length: %d\n", (int) bitarray_length);
+ 
+  if (bit_length <= 1) {
+    return;
+  }
+ 
+  size_t end_index = bit_offset + bit_length - 1; 
+  bool temp;
+  while(bit_offset < end_index) {
+    //printf("Entering the loop...");
+    temp = bitarray_get(bitarray, bit_offset);
+    //printf("temp: %d\n", temp);
+    bitarray_set(bitarray, bit_offset, bitarray_get(bitarray, end_index));
+    bitarray_set(bitarray, end_index, temp);
+    //*bitarray_start = *bitarray_end;
+    //printf("*bitarray_start: %d\n", (int) *bitarray_start);
+    //*bitarray_end = temp;
+    //printf("*bitarray_end: %d\n", (int) *bitarray_end);
+    //printf("Exiting the loop...");
+    bit_offset++;
+    //printf("bitarray_start: %p\n", bitarray_start);
+    end_index--;
+    //printf("bitarray_end: %p\n", bitarray_end);
   }
 }
 
-void bitarray_rotate(bitarray_t *const bitarray,
+void bitarray_rotate(bitarray_t *const bitarray, const size_t bit_offset, const size_t bit_length, const ssize_t bit_right_amount) {
+  // implements bitarray rotation via clever (A^R + B^R)^R 
+  // algorithm discussed in project 1 handout
+  assert(bit_offset + bit_length <= bitarray->bit_sz);
+  
+  //printf("bitarray_rotate() is being called.\n");
+  //printf("bitarray: %p\n", bitarray);
+  //printf("bit_offset: %d\n",(int) bit_offset);
+  //printf("bit_length: %d\n", (int) bit_length);
+  //printf("bit_right_amount: %d\n", (int) bit_right_amount); 
+  
+  if (bit_length == 0) {
+    return;
+  }
+
+  const size_t bit_left_amount = modulo(-bit_right_amount, bit_length);
+  
+  //printf("Rotating A...\n"); 
+  bitarray_reverse(bitarray, bit_offset, bit_left_amount);
+
+  //printf("Rotating B...\n");
+  bitarray_reverse(bitarray, bit_offset + bit_left_amount, bit_length - bit_left_amount);
+  
+  //printf("Rotating A+B...\n");
+  bitarray_reverse(bitarray, bit_offset, bit_length);
+  
+  //printf("Concluded rotation.\n");
+}
+
+void bitarray_rotate_2(bitarray_t *const bitarray,
                      const size_t bit_offset,
                      const size_t bit_length,
                      const ssize_t bit_right_amount) {
+  // original bitarray rotation implementation
   assert(bit_offset + bit_length <= bitarray->bit_sz);
 
   if (bit_length == 0) {
