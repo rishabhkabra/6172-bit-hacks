@@ -67,6 +67,10 @@ else ifeq ($(PLATFORM),Darwin)
 	LDFLAGS += -arch x86_64 -framework CoreServices
 endif
 
+ifeq ($(GCOV),1)
+CFLAGS += -ftest-coverage -fprofile-arcs
+LDFLAGS += -ftest-coverage -fprofile-arcs
+endif
 
 # Determine which profile--debug or release--we should build against, and set
 # CFLAGS appropriately.
