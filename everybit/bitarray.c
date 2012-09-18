@@ -190,6 +190,19 @@ void bitarray_rotate(bitarray_t *const bitarray,
            modulo(-bit_right_amount, bit_length));
 }
 
+static void bitarray_reverse(bitarray_t * bitarray_start,
+                             const size_t bitarray_length) {
+  bitarray_t * bitarray_end = bitarray_start + bitarray_length - 1;
+  bitarray_t * temp;
+  while(bitarray_start < bitarray_end) {
+    *temp = *bitarray_start;
+    *bitarray_start = *bitarray_end;
+    *bitarray_end = *temp;
+    bitarray_start++;
+    bitarray_end--;
+  }
+}
+
 static void bitarray_rotate_left(bitarray_t *const bitarray,
                                  const size_t bit_offset,
                                  const size_t bit_length,
