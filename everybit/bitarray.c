@@ -146,7 +146,7 @@ size_t bitarray_get_bit_sz(const bitarray_t *const bitarray) {
   return bitarray->bit_sz;
 }
 
-bool bitarray_get(const bitarray_t *const bitarray, const size_t bit_index) {
+inline bool bitarray_get(const bitarray_t *const bitarray, const size_t bit_index) {
   assert(bit_index < bitarray->bit_sz);
 
   // We're storing bits in packed form, 8 per byte.  So to get the nth
@@ -161,7 +161,7 @@ bool bitarray_get(const bitarray_t *const bitarray, const size_t bit_index) {
              true : false;
 }
 
-void bitarray_set(bitarray_t *const bitarray,
+inline void bitarray_set(bitarray_t *const bitarray,
                   const size_t bit_index,
                   const bool value) {
   assert(bit_index < bitarray->bit_sz);
@@ -373,7 +373,7 @@ static size_t modulo(const ssize_t n, const size_t m) {
   return (size_t)result;
 }
 
-static char bitmask(const size_t bit_index) {
+inline static char bitmask(const size_t bit_index) {
   return 1 << (bit_index % 8);
 }
 
