@@ -33,6 +33,10 @@
 
 #include "./bitarray.h"
 
+#define WORD char
+#define WORD_SIZE (sizeof(char) * 8)
+#define REVERSE_WORD(w) reverse_char(w)
+
 
 // ********************************* Types **********************************
 
@@ -207,6 +211,92 @@ static void bitarray_reverse(bitarray_t * bitarray, size_t bit_offset, const siz
   }
 }
 
+static const char CharReverseLookupTable[256] = 
+{
+#define R2(n) n, n+2*64, n+1*64, n+3*64
+#define R4(n) R2(n), R2(n+2*16), R2(n+1*16), R2(n+3*16)
+#define R6(n) R4(n), R4(n+2*4), R4(n+1*4), R4(n+3*4)
+  R6(0), R6(2), R6(1), R6(3)
+}; // reference: Bit Twiddling Hacks, by Sean Eron Anderson (seander@cs.stanford.edu). Table definition suggested by Hallvard Furuseth on July 14, 2009.
+
+static char reverse_char(char c) {
+  return CharReverseLookupTable[c]; 
+}
+
+static void bitarray_reverse_on_steroids(bitarray_t * bitarray, size_t bit_offset, const size_t bit_length) {
+
+  if (bit_length <= 32) {
+    bitarray_reverse(bitarray, bit_offset, bit_length);
+    return;
+  }
+
+  size_t leftexcess = WORD_SIZE - (bit_offset % WORD_SIZE);
+  WORD * leftword = bitarray->buf + bit_offset / WORD_SIZE;
+  size_t rightexcess = (bit_offset + bit_length) % WORD_SIZE;
+  if (rightexcess == 0) {
+    rightexcess = WORD_SIZE;
+  }
+  WORD * rightword = bitarray->buf + (bit_offset + bit_length - 1) / WORD_SIZE;
+
+  char x, y, mask1, mask2, temp;
+  while (leftword < rightword) {
+  if (leftexcess < rightexcess) {
+    mask1 = -1 << (WORD_SIZE - leftexcess); // desired mask is a char with exactly #leftexcess ones followed by zeroes. used to preserve selected bits and destroy rest.
+    mask2 = ~(-1 >> (WORD_SIZE - leftexcess)); // desired mask is a char that ends with exactly #leftexcess zeroes. all preceding bits are ones. used to destroy certain bits and preserve rest.
+    x = (REVERSE_WORD(*leftword) & mask1) >> (rightexcess - leftexcess);
+    y = (REVERSE_WORD(*rightword) & (mask1 >> (WORD_SIZE - rightexcess))) >> (rightexcess - leftexcess);
+    *leftword = (*leftword & mask2) | y;
+    *rightword = (*rightword & (mask2 << (WORD_SIZE - rightexcess))) | x;
+
+    rightexcess -= leftexcess;
+    leftword++;
+    leftexcess = WORD_SIZE;
+
+  } else if (leftexcess > rightexcess) {
+    mask1 = -1 >> (WORD_SIZE - rightexcess); // desired mask is a char that ends with exactly #rightexcess ones. all preceding bits are zeroes. used to preserve selected bits and destroy rest.
+    mask2 = ~(-1 << (WORD_SIZE - rightexcess)); // desired mask is a char with exactly #rightexcess zeroes followed by ones. used to destroy selected bits and destroy rest.
+    x = (REVERSE_WORD(*leftword) & (mask1 << (WORD_SIZE - leftexcess))) << (leftexcess - rightexcess);
+    y = (REVERSE_WORD(*rightword) & mask1) << (leftexcess - rightexcess);
+    *leftword = (*leftword & (mask2 >> (WORD_SIZE - leftexcess))) | y;
+    *rightword = (*rightword & mask2) | x;
+
+    leftexcess -= rightexcess;
+    rightword--;
+    rightexcess = WORD_SIZE;
+
+  } else {  // case 3: leftexcess == rightexcess
+    if (leftexcess != 0) {
+      mask1 = -1 >> (WORD_SIZE - leftexcess); // desired mask is a char that ends with exactly #leftexcess == #rightexcess ones. all preceding bits are zeroes. used to preserve selected bits and destroy others.
+      mask2 = ~mask1; 
+      x = REVERSE_WORD(*leftword & mask1);
+      y = REVERSE_WORD(*rightword) & mask1;
+      *leftword = (*leftword & mask2) | y;
+      *rightword = (*rightword & REVERSE_WORD(mask2)) | x;
+    } else {
+      temp = REVERSE_WORD(*leftword);
+      *leftword = REVERSE_WORD(*rightword);
+      *rightword = temp;
+    }
+    leftword++;
+    leftexcess = WORD_SIZE;
+    rightword--;
+    rightexcess = WORD_SIZE;
+  }
+  }
+
+  if (leftword == rightword) {
+    size_t bit_offset2, bit_length2;
+    if (leftexcess == WORD_SIZE) {
+      bit_offset2 = (leftword - (bitarray->buf) - 1) * WORD_SIZE;
+      bit_length2 = rightexcess;
+    } else {
+      bit_offset2 = ((leftword - (bitarray->buf)) * WORD_SIZE) - leftexcess;
+      bit_length2 = leftexcess;
+    }
+    bitarray_reverse(bitarray, bit_offset2, bit_length2);}
+}
+
+
 void bitarray_rotate(bitarray_t *const bitarray, const size_t bit_offset, const size_t bit_length, const ssize_t bit_right_amount) {
   // implements bitarray rotation via clever (A^R + B^R)^R 
   // algorithm discussed in project 1 handout
@@ -225,13 +315,13 @@ void bitarray_rotate(bitarray_t *const bitarray, const size_t bit_offset, const 
   const size_t bit_left_amount = modulo(-bit_right_amount, bit_length);
   
   //printf("Rotating A...\n"); 
-  bitarray_reverse(bitarray, bit_offset, bit_left_amount);
+  bitarray_reverse_on_steroids(bitarray, bit_offset, bit_left_amount);
 
   //printf("Rotating B...\n");
-  bitarray_reverse(bitarray, bit_offset + bit_left_amount, bit_length - bit_left_amount);
+  bitarray_reverse_on_steroids(bitarray, bit_offset + bit_left_amount, bit_length - bit_left_amount);
   
   //printf("Rotating A+B...\n");
-  bitarray_reverse(bitarray, bit_offset, bit_length);
+  bitarray_reverse_on_steroids(bitarray, bit_offset, bit_length);
   
   //printf("Concluded rotation.\n");
 }
