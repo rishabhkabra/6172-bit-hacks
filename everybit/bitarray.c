@@ -36,10 +36,10 @@
 
 // ********************************* Types **********************************
 
-#define WORD unsigned int
+#define WORD unsigned long
 #define WORD_SIZE_IN_BYTES (sizeof(WORD))
 #define WORD_SIZE_IN_BITS (WORD_SIZE_IN_BYTES * 8)
-#define REVERSE_WORD(word) (reverse_unsigned_int(word))
+#define REVERSE_WORD(word) (reverse_unsigned_long(word))
 
 // Concrete data type representing an array of bits.
 struct bitarray {
@@ -231,6 +231,17 @@ static unsigned int reverse_unsigned_int(unsigned int i) {
       (CharReverseLookupTable[(i >> 8) & 0xff] << 16) |
       (CharReverseLookupTable[(i >> 16) & 0xff] << 8) |
       (CharReverseLookupTable[(i >> 24) & 0xff]);
+}
+
+static unsigned long reverse_unsigned_long(unsigned long l) {
+    return (CharReverseLookupTable[l & 0xff] << 56) |
+      (CharReverseLookupTable[(l >> 8) & 0xff] << 48) |
+      (CharReverseLookupTable[(l >> 16) & 0xff] << 40) |
+      (CharReverseLookupTable[(l >> 24) & 0xff] << 32) |
+      (CharReverseLookupTable[(l >> 32) & 0xff] << 24) |
+      (CharReverseLookupTable[(l >> 40) & 0xff] << 16) |
+      (CharReverseLookupTable[(l >> 48) & 0xff] << 8) |
+      (CharReverseLookupTable[(l >> 56) & 0xff]);
 }
 
 static void bitarray_reverse_on_steroids(bitarray_t * bitarray, size_t bit_offset, const size_t bit_length) {
