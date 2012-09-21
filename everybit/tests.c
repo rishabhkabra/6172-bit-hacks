@@ -48,6 +48,15 @@ void testutil_rotate(const size_t bit_offset,
                      const size_t bit_length,
                      const ssize_t bit_right_shift_amount);
 
+
+// Checks that the rotation is valid given the size of test_bitarray.
+// Causes a test suite failure if the input is invalid.
+void testutil_require_valid_input(const size_t bit_offset,
+                                  const size_t bit_length,
+                                  const ssize_t bit_right_shift_amount,
+                                  const char* const func_name,
+                                  const int line);
+
 // Creates a new bit array in test_bitarray of the specified size and
 // fills it with random data based on the seed given.  For a given seed number,
 // the pseudorandom data will be the same (at least on the same glibc
@@ -241,6 +250,20 @@ void testutil_rotate(const size_t bit_offset,
   }
 }
 
+void testutil_require_valid_input(const size_t bit_offset,
+                                  const size_t bit_length,
+                                  const ssize_t bit_right_shift_amount,
+                                  const char* const func_name,
+                                  const int line) {
+  size_t bitarray_length = bitarray_get_bit_sz(test_bitarray);
+  if (bit_offset >= bitarray_length || bit_length > bitarray_length ||
+      bit_offset + bit_length > bitarray_length) {
+    // invalid input
+    TEST_FAIL_WITH_NAME(func_name, line, " TEST SUITE ERROR - " \
+        "bit_offset + bit_length > bitarray_length");
+  }
+}
+
 double longrunning_rotation() {
   // We're going to be doing a bunch of rotations; we probably shouldn't
   // let the user see all the verbose output.
@@ -336,6 +359,7 @@ void parse_and_run_tests(const char *filename, int selected_test) {
         size_t offset = NEXT_ARG_INT();
         size_t length = NEXT_ARG_INT();
         ssize_t amount = NEXT_ARG_INT();
+        testutil_require_valid_input(offset, length, amount, filename, line);
         testutil_rotate(offset, length, amount);
       }
       break;
