@@ -256,7 +256,7 @@ void testutil_require_valid_input(const size_t bit_offset,
                                   const char* const func_name,
                                   const int line) {
   size_t bitarray_length = bitarray_get_bit_sz(test_bitarray);
-  if (bit_offset >= bitarray_length || bit_length > bitarray_length ||
+  if (bit_offset > bitarray_length || bit_length > bitarray_length ||
       bit_offset + bit_length > bitarray_length) {
     // invalid input
     TEST_FAIL_WITH_NAME(func_name, line, " TEST SUITE ERROR - " \
