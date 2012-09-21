@@ -1,3 +1,4 @@
 1) Ben Bitdiddle's implementation: 49.579371s
 2) Rotate via reversal implemention: 0.001699s --- 29181x
 3) Reverse using character operations and bit hacks: 0.000320s --- 5.31x
+4) Using unsigned long instead of char as the base word type for bitarray->buf --- 3.60x
