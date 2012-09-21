@@ -33,12 +33,12 @@
 
 #include "./bitarray.h"
 
-#define WORD char
-#define WORD_SIZE (sizeof(char) * 8)
-#define REVERSE_WORD(w) reverse_char(w)
-
 
 // ********************************* Types **********************************
+
+#define WORD char
+#define WORD_SIZE (sizeof(WORD) * 8)
+#define REVERSE_WORD(w) (reverse_char(w))
 
 // Concrete data type representing an array of bits.
 struct bitarray {
@@ -48,7 +48,7 @@ struct bitarray {
 
   // The underlying memory buffer that stores the bits in
   // packed form (8 per byte).
-  char *buf;
+  WORD *buf;
 };
 
 
@@ -109,14 +109,14 @@ static size_t modulo(const ssize_t n, const size_t m);
 // however, so as long as you always use bitarray_get and bitarray_set
 // to access bits in your bitarray, this reverse representation should
 // not matter.
-static char bitmask(const size_t bit_index);
+static WORD bitmask(const size_t bit_index);
 
 
 // ******************************* Functions ********************************
 
 bitarray_t *bitarray_new(const size_t bit_sz) {
   // Allocate an underlying buffer of ceil(bit_sz/8) bytes.
-  char *const buf = calloc(1, bit_sz / 8 + ((bit_sz % 8 == 0) ? 0 : 1));
+  WORD *const buf = calloc(1, bit_sz / WORD_SIZE + ((bit_sz % WORD_SIZE == 0) ? 0 : 1));
   if (buf == NULL) {
     return NULL;
   }
@@ -157,7 +157,7 @@ inline bool bitarray_get(const bitarray_t *const bitarray, const size_t bit_inde
   // get the byte; we then bitwise-and the byte with an appropriate mask
   // to produce either a zero byte (if the bit was 0) or a nonzero byte
   // (if it wasn't).  Finally, we convert that to a boolean.
-  return (bitarray->buf[bit_index / 8] & bitmask(bit_index)) ?
+  return (bitarray->buf[bit_index / WORD_SIZE] & bitmask(bit_index)) ?
              true : false;
 }
 
@@ -173,8 +173,8 @@ inline void bitarray_set(bitarray_t *const bitarray,
   // get the byte; we then bitwise-and the byte with an appropriate mask
   // to clear out the bit we're about to set.  We bitwise-or the result
   // with a byte that has either a 1 or a 0 in the correct place.
-  bitarray->buf[bit_index / 8] =
-      (bitarray->buf[bit_index / 8] & ~bitmask(bit_index)) |
+  bitarray->buf[bit_index / WORD_SIZE] =
+      (bitarray->buf[bit_index / WORD_SIZE] & ~bitmask(bit_index)) |
            (value ? bitmask(bit_index) : 0);
 }
 
@@ -223,6 +223,13 @@ static char reverse_char(char c) {
   return CharReverseLookupTable[c]; 
 }
 
+static unsigned int reverse_unsigned_int(unsigned int i) {
+  return (CharReverseLookupTable[i & 0xff] << 24) |
+      (CharReverseLookupTable[(i >> 8) & 0xff] << 16) |
+      (CharReverseLookupTable[(i >> 16) & 0xff] << 8) |
+      (CharReverseLookupTable[(i >> 24) & 0xff]);
+}
+
 static void bitarray_reverse_on_steroids(bitarray_t * bitarray, size_t bit_offset, const size_t bit_length) {
 
   if (bit_length <= 32) {
@@ -238,7 +245,7 @@ static void bitarray_reverse_on_steroids(bitarray_t * bitarray, size_t bit_offse
   }
   WORD * rightword = bitarray->buf + (bit_offset + bit_length - 1) / WORD_SIZE;
 
-  char x, y, mask1, mask2, temp;
+  WORD x, y, mask1, mask2, temp;
   while (leftword < rightword) {
   if (leftexcess < rightexcess) {
     mask1 = -1 << (WORD_SIZE - leftexcess); // desired mask is a char with exactly #leftexcess ones followed by zeroes. used to preserve selected bits and destroy rest.
@@ -373,7 +380,7 @@ static size_t modulo(const ssize_t n, const size_t m) {
   return (size_t)result;
 }
 
-inline static char bitmask(const size_t bit_index) {
-  return 1 << (bit_index % 8);
+inline static WORD bitmask(const size_t bit_index) {
+  return ((WORD) 1) << (bit_index % WORD_SIZE);
 }
 
