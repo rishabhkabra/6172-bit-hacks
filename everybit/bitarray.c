@@ -174,9 +174,10 @@ inline void bitarray_set(bitarray_t *const bitarray,
   // get the byte; we then bitwise-and the byte with an appropriate mask
   // to clear out the bit we're about to set.  We bitwise-or the result
   // with a byte that has either a 1 or a 0 in the correct place.
+  WORD mask = bitmask(bit_index);
   bitarray->buf[bit_index / WORD_SIZE_IN_BITS] =
-      (bitarray->buf[bit_index / WORD_SIZE_IN_BITS] & ~bitmask(bit_index)) |
-           (value ? bitmask(bit_index) : 0);
+      (bitarray->buf[bit_index / WORD_SIZE_IN_BITS] & ~mask) |
+           (value ? mask : 0);
 }
 
 static void bitarray_reverse(bitarray_t * bitarray, size_t bit_offset, const size_t bit_length) {
