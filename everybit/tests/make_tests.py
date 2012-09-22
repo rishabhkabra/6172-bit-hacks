@@ -46,11 +46,11 @@ def get_expected_result(init_bit_string, bit_offset, subbit_length, bit_right_am
 	if subbit_length == 0 or abs(bit_right_amount) % subbit_length == 0: # the trivial cases
 		return init_bit_string
 	else:
-		reduced_bit_right_amount = abs(bit_right_amount) % subbit_length
-		if bit_right_amount < 0: # since % operation always returns nonnegative value
-			reduced_bit_right_amount *= -1
+		#reduced_bit_right_amount = abs(bit_right_amount) % subbit_length
+		#if bit_right_amount < 0: # since % operation always returns nonnegative value
+		#	reduced_bit_right_amount *= -1
 		bitarray = BitVector(bitstring = init_bit_string)
-		bitarray[bit_offset:(bit_offset + subbit_length)] = bitarray[bit_offset:(bit_offset + subbit_length)] >> reduced_bit_right_amount
+		bitarray[bit_offset:(bit_offset + subbit_length)] = bitarray[bit_offset:(bit_offset + subbit_length)] >> bit_right_amount
 		return str(bitarray)
 
 def add_bitarray_tests(bit_length):
