@@ -39,6 +39,8 @@ double longrunning_rotation();
 
 double superlongrunning_rotation();
 
+double extrawickedlongrunning_rotation();
+
 // Runs the testsuite specified in a given file.
 void parse_and_run_tests(const char *filename, int min_test);
 

@@ -302,11 +302,41 @@ double superlongrunning_rotation() {
 
   const clockmark_t start_time = ktiming_getmark();
   testutil_rotate(0, bit_sz, -bit_sz / 4);
-  testutil_rotate(0, bit_sz, bit_sz / 4);
+  testutil_rotate(bit_sz / 4, bit_sz / 2, bit_sz / 4);
+  testutil_rotate(0, bit_sz, bit_sz / 2);
+  testutil_rotate(2, bit_sz - 2, 1);
+  testutil_rotate(bit_sz / 4, (3 * (bit_sz / 4) -1), -1);
+  testutil_rotate(0, bit_sz, bit_sz / 7);
+  testutil_rotate(bit_sz / 101, bit_sz / 2, bit_sz);
+  const clockmark_t end_time = ktiming_getmark();
+
+  // Arguably, we should set test_verbose back to whatever it was before
+  // we started.  However, since we're never going to be running more than
+  // one performance test at a time (or performance tests at the same time
+  // as functional tests), we can just let it be.
+
+  return ktiming_diff_usec(&start_time, &end_time) / 1000000000.0;
+}
+
+double extrawickedlongrunning_rotation() {
+  // We're going to be doing a bunch of rotations; we probably shouldn't
+  // let the user see all the verbose output.
+  test_verbose = false;
+
+  // There's probably some great reason why this exact size was chosen for
+  // the test bit array; however, if there is, it's been lost to
+  // history.
+  const size_t bit_sz = 1728 * 1024 * 1024 + 314159;
+  testutil_newrand(bit_sz, 0);
+
+  const clockmark_t start_time = ktiming_getmark();
+  testutil_rotate(0, bit_sz, -bit_sz / 4);
+  testutil_rotate(0, bit_sz / 2, bit_sz / 4);
   testutil_rotate(0, bit_sz, bit_sz / 2);
   testutil_rotate(0, bit_sz, 1);
   testutil_rotate(0, bit_sz, -1);
-  testutil_rotate(0, bit_sz, bit_sz / 7);
+  testutil_rotate(bit_sz / 4, 3 * (bit_sz / 4) -1, bit_sz / 7);
+  testutil_rotate(bit_sz / 101, bit_sz / 2, bit_sz); 
   const clockmark_t end_time = ktiming_getmark();
 
   // Arguably, we should set test_verbose back to whatever it was before

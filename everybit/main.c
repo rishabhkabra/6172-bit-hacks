@@ -47,7 +47,7 @@ int main(int argc, char **argv) {
   char optchar;
   opterr = 0;
   int selected_test = -1;
-  while ((optchar = getopt(argc, argv, "n:t:s")) != -1) { //use :r to run original provided execution
+  while ((optchar = getopt(argc, argv, "n:t:rsw")) != -1) { //use :r to run original provided execution
     switch (optchar) {
       case 'n':
         selected_test = atoi(optarg);
@@ -74,7 +74,14 @@ int main(int argc, char **argv) {
 
         retval = EXIT_SUCCESS;
         goto cleanup;
-        
+      case 'w':
+        printf("---- RESULTS ----\n");
+        printf("Elapsed execution time: %.6fs\n",
+            extrawickedlongrunning_rotation());
+        printf("---- END RESULTS ----\n");
+
+        retval = EXIT_SUCCESS;
+        goto cleanup;  
     }
   }
 
@@ -90,6 +97,8 @@ int main(int argc, char **argv) {
 void print_usage(const char *const argv_0) {
   fprintf(stderr, "usage: %s\n"
     "\t -r Run a sample long-running rotation operation\n"
+    "\t -s Run a sample super long-running rotation operation\n"
+    "\t -w Run a sample extra wicked long-running rotation operation\n"
     "\t    (note: for now the provided -r option tests only performance but not correctness.)\n"
     "\t -t tests/default\tRun all tests in the testfile tests/default\n"
     "\t -n 1 -t tests/default\tRun test 1 in the testfile tests/default\n",
