@@ -39,7 +39,7 @@
 #define WORD unsigned long
 #define WORD_SIZE_IN_BYTES (sizeof(WORD))
 #define WORD_SIZE_IN_BITS (WORD_SIZE_IN_BYTES * 8)
-#define REVERSE_WORD(word) (reverse_unsigned_long2(word))
+#define REVERSE_WORD(word) (reverse_unsigned_long(word))
 
 // Concrete data type representing an array of bits.
 struct bitarray {
@@ -204,15 +204,13 @@ static void bitarray_reverse(bitarray_t * bitarray, size_t bit_offset, const siz
   }
 }
 
-/*
-static const char CharReverseLookupTable[256] = 
+static const unsigned long CharReverseLookupTable[256] = 
 {
 #define R2(n) n, n+2*64, n+1*64, n+3*64
 #define R4(n) R2(n), R2(n+2*16), R2(n+1*16), R2(n+3*16)
 #define R6(n) R4(n), R4(n+2*4), R4(n+1*4), R4(n+3*4)
   R6(0), R6(2), R6(1), R6(3)
 }; // reference: Bit Twiddling Hacks, by Sean Eron Anderson (seander@cs.stanford.edu). Table definition suggested by Hallvard Furuseth on July 14, 2009.
-*/
 
 /*
 static char reverse_char(char c) {
@@ -227,9 +225,8 @@ static unsigned int reverse_unsigned_int(unsigned int i) {
 }
 */
 
-/*
 static unsigned long reverse_unsigned_long(unsigned long l) {
-    return (CharReverseLookupTable[l & 0xff] << 56) |
+  return (CharReverseLookupTable[l & 0xff] << 56) |
       (CharReverseLookupTable[(l >> 8) & 0xff] << 48) |
       (CharReverseLookupTable[(l >> 16) & 0xff] << 40) |
       (CharReverseLookupTable[(l >> 24) & 0xff] << 32) |
@@ -238,8 +235,9 @@ static unsigned long reverse_unsigned_long(unsigned long l) {
       (CharReverseLookupTable[(l >> 48) & 0xff] << 8) |
       (CharReverseLookupTable[(l >> 56) & 0xff]);
 }
-*/
 
+/*
+//Slower implementation for reversing unsigned long values:
 static unsigned long reverse_unsigned_long2 (unsigned long l) {
   l = ((l >> 1) & 0x5555555555555555) | ((l & 0x5555555555555555) << 1); // swap odd and even bits
   l = ((l >> 2) & 0x3333333333333333) | ((l & 0x3333333333333333) << 2); // swap consecutive pairs
@@ -249,6 +247,7 @@ static unsigned long reverse_unsigned_long2 (unsigned long l) {
   l = (l >> 32) | (l << 32); // swap 32-bit words
   return l;
 }
+*/
 
 static void bitarray_reverse_on_steroids(bitarray_t * bitarray, size_t bit_offset, const size_t bit_length) {
 
