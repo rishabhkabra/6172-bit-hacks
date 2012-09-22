@@ -47,7 +47,7 @@ int main(int argc, char **argv) {
   char optchar;
   opterr = 0;
   int selected_test = -1;
-  while ((optchar = getopt(argc, argv, "n:t:r")) != -1) {
+  while ((optchar = getopt(argc, argv, "n:t:s")) != -1) { //use :r to run original provided execution
     switch (optchar) {
       case 'n':
         selected_test = atoi(optarg);
@@ -66,6 +66,15 @@ int main(int argc, char **argv) {
 
         retval = EXIT_SUCCESS;
         goto cleanup;
+      case 's':
+        printf("---- RESULTS ----\n");
+        printf("Elapsed execution time: %.6fs\n",
+            superlongrunning_rotation());
+        printf("---- END RESULTS ----\n");
+
+        retval = EXIT_SUCCESS;
+        goto cleanup;
+        
     }
   }
 

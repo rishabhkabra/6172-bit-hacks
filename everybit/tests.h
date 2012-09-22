@@ -37,6 +37,8 @@
 // A sample long-running set of rotation operations.
 double longrunning_rotation();
 
+double superlongrunning_rotation();
+
 // Runs the testsuite specified in a given file.
 void parse_and_run_tests(const char *filename, int min_test);
 
