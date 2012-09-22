@@ -39,7 +39,7 @@
 #define WORD unsigned long
 #define WORD_SIZE_IN_BYTES (sizeof(WORD))
 #define WORD_SIZE_IN_BITS (WORD_SIZE_IN_BYTES * 8)
-#define REVERSE_WORD(word) (reverse_unsigned_long(word))
+#define REVERSE_WORD(word) (reverse_unsigned_long2(word))
 
 // Concrete data type representing an array of bits.
 struct bitarray {
@@ -147,7 +147,8 @@ size_t bitarray_get_bit_sz(const bitarray_t *const bitarray) {
   return bitarray->bit_sz;
 }
 
-inline bool bitarray_get(const bitarray_t *const bitarray, const size_t bit_index) {
+// TODO: inline this
+bool bitarray_get(const bitarray_t *const bitarray, const size_t bit_index) {
   assert(bit_index < bitarray->bit_sz);
 
   // We're storing bits in packed form, 8 per byte.  So to get the nth
@@ -162,7 +163,8 @@ inline bool bitarray_get(const bitarray_t *const bitarray, const size_t bit_inde
              true : false;
 }
 
-inline void bitarray_set(bitarray_t *const bitarray,
+// TODO: inline this
+void bitarray_set(bitarray_t *const bitarray,
                   const size_t bit_index,
                   const bool value) {
   assert(bit_index < bitarray->bit_sz);
@@ -185,10 +187,6 @@ static void bitarray_reverse(bitarray_t * bitarray, size_t bit_offset, const siz
   // at bitarray_start. Assumes bitarray_start + bitarray_length - 1
   // is the address to the last of element of the to-be-reversed array.
 
-  //printf("bitarray_reverse() is being called.\n");
-  //printf("bitarray_start: %p\n", bitarray_start);
-  //printf("bitarray_length: %d\n", (int) bitarray_length);
- 
   assert(bit_offset + bit_length <= bitarray->bit_sz);
 
   if (bit_length <= 1) {
@@ -198,23 +196,15 @@ static void bitarray_reverse(bitarray_t * bitarray, size_t bit_offset, const siz
   size_t end_index = bit_offset + bit_length - 1; 
   bool temp;
   while(bit_offset < end_index) {
-    //printf("Entering the loop...");
     temp = bitarray_get(bitarray, bit_offset);
-    //printf("temp: %d\n", temp);
     bitarray_set(bitarray, bit_offset, bitarray_get(bitarray, end_index));
     bitarray_set(bitarray, end_index, temp);
-    //*bitarray_start = *bitarray_end;
-    //printf("*bitarray_start: %d\n", (int) *bitarray_start);
-    //*bitarray_end = temp;
-    //printf("*bitarray_end: %d\n", (int) *bitarray_end);
-    //printf("Exiting the loop...");
     bit_offset++;
-    //printf("bitarray_start: %p\n", bitarray_start);
     end_index--;
-    //printf("bitarray_end: %p\n", bitarray_end);
   }
 }
 
+/*
 static const char CharReverseLookupTable[256] = 
 {
 #define R2(n) n, n+2*64, n+1*64, n+3*64
@@ -222,7 +212,9 @@ static const char CharReverseLookupTable[256] =
 #define R6(n) R4(n), R4(n+2*4), R4(n+1*4), R4(n+3*4)
   R6(0), R6(2), R6(1), R6(3)
 }; // reference: Bit Twiddling Hacks, by Sean Eron Anderson (seander@cs.stanford.edu). Table definition suggested by Hallvard Furuseth on July 14, 2009.
+*/
 
+/*
 static char reverse_char(char c) {
   return CharReverseLookupTable[c]; 
 }
@@ -233,7 +225,9 @@ static unsigned int reverse_unsigned_int(unsigned int i) {
       (CharReverseLookupTable[(i >> 16) & 0xff] << 8) |
       (CharReverseLookupTable[(i >> 24) & 0xff]);
 }
+*/
 
+/*
 static unsigned long reverse_unsigned_long(unsigned long l) {
     return (CharReverseLookupTable[l & 0xff] << 56) |
       (CharReverseLookupTable[(l >> 8) & 0xff] << 48) |
@@ -243,6 +237,17 @@ static unsigned long reverse_unsigned_long(unsigned long l) {
       (CharReverseLookupTable[(l >> 40) & 0xff] << 16) |
       (CharReverseLookupTable[(l >> 48) & 0xff] << 8) |
       (CharReverseLookupTable[(l >> 56) & 0xff]);
+}
+*/
+
+static unsigned long reverse_unsigned_long2 (unsigned long l) {
+  l = ((l >> 1) & 0x5555555555555555) | ((l & 0x5555555555555555) << 1); // swap odd and even bits
+  l = ((l >> 2) & 0x3333333333333333) | ((l & 0x3333333333333333) << 2); // swap consecutive pairs
+  l = ((l >> 4) & 0x0F0F0F0F0F0F0F0F) | ((l & 0x0F0F0F0F0F0F0F0F) << 4); // swap nibbles
+  l = ((l >> 8) & 0x00FF00FF00FF00FF) | ((l & 0x00FF00FF00FF00FF) << 8); // swap bytes
+  l = ((l >> 16) & 0x0000FFFF0000FFFF) | ((l & 0x0000FFFF0000FFFF) << 16); // swap consecutive byte-pairs
+  l = (l >> 32) | (l << 32); // swap 32-bit words
+  return l;
 }
 
 static void bitarray_reverse_on_steroids(bitarray_t * bitarray, size_t bit_offset, const size_t bit_length) {
