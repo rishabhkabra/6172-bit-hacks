@@ -39,7 +39,9 @@
 #define WORD unsigned long
 #define WORD_SIZE_IN_BYTES (sizeof(WORD))
 #define WORD_SIZE_IN_BITS (WORD_SIZE_IN_BYTES * 8)
+#define MINUS_ONE_WORD (0xffffffffffffffff)
 #define REVERSE_WORD(word) (reverse_unsigned_long(word))
+#define WORD_BITMASK(index) (unsigned_long_bitmask(index))
 
 // Concrete data type representing an array of bits.
 struct bitarray {
@@ -110,7 +112,6 @@ static size_t modulo(const ssize_t n, const size_t m);
 // however, so as long as you always use bitarray_get and bitarray_set
 // to access bits in your bitarray, this reverse representation should
 // not matter.
-static WORD bitmask(const size_t bit_index);
 
 
 // ******************************* Functions ********************************
@@ -143,6 +144,11 @@ void bitarray_free(bitarray_t *const bitarray) {
   free(bitarray);
 }
 
+
+inline static unsigned long unsigned_long_bitmask(const size_t bit_index) {
+  return ((unsigned long) 1) << (63 - (bit_index % WORD_SIZE_IN_BITS));
+}
+
 size_t bitarray_get_bit_sz(const bitarray_t *const bitarray) {
   return bitarray->bit_sz;
 }
@@ -159,7 +165,8 @@ bool bitarray_get(const bitarray_t *const bitarray, const size_t bit_index) {
   // get the byte; we then bitwise-and the byte with an appropriate mask
   // to produce either a zero byte (if the bit was 0) or a nonzero byte
   // (if it wasn't).  Finally, we convert that to a boolean.
-  return (bitarray->buf[bit_index / WORD_SIZE_IN_BITS] & bitmask(bit_index)) ?
+
+  return (bitarray->buf[bit_index / WORD_SIZE_IN_BITS] & WORD_BITMASK(bit_index)) ?
              true : false;
 }
 
@@ -176,10 +183,11 @@ void bitarray_set(bitarray_t *const bitarray,
   // get the byte; we then bitwise-and the byte with an appropriate mask
   // to clear out the bit we're about to set.  We bitwise-or the result
   // with a byte that has either a 1 or a 0 in the correct place.
-  WORD mask = bitmask(bit_index);
-  bitarray->buf[bit_index / WORD_SIZE_IN_BITS] =
-      (bitarray->buf[bit_index / WORD_SIZE_IN_BITS] & ~mask) |
-           (value ? mask : 0);
+  WORD mask = WORD_BITMASK(bit_index);
+  size_t bufindex = bit_index / WORD_SIZE_IN_BITS;
+  bitarray->buf[bufindex] = 
+      (bitarray->buf[bufindex] & ~mask) |
+      (value ? mask : 0);
 }
 
 static void bitarray_reverse(bitarray_t * bitarray, size_t bit_offset, const size_t bit_length) {
@@ -204,7 +212,7 @@ static void bitarray_reverse(bitarray_t * bitarray, size_t bit_offset, const siz
   }
 }
 
-static const unsigned long CharReverseLookupTable[256] = 
+static const unsigned long char_reverse_lookup_table[256] = 
 {
 #define R2(n) n, n+2*64, n+1*64, n+3*64
 #define R4(n) R2(n), R2(n+2*16), R2(n+1*16), R2(n+3*16)
@@ -214,26 +222,26 @@ static const unsigned long CharReverseLookupTable[256] =
 
 /*
 static char reverse_char(char c) {
-  return CharReverseLookupTable[c]; 
+  return char_reverse_lookup_table[c]; 
 }
 
 static unsigned int reverse_unsigned_int(unsigned int i) {
-  return (CharReverseLookupTable[i & 0xff] << 24) |
-      (CharReverseLookupTable[(i >> 8) & 0xff] << 16) |
-      (CharReverseLookupTable[(i >> 16) & 0xff] << 8) |
-      (CharReverseLookupTable[(i >> 24) & 0xff]);
+  return (char_reverse_lookup_table[i & 0xff] << 24) |
+      (char_reverse_lookup_table[(i >> 8) & 0xff] << 16) |
+      (char_reverse_lookup_table[(i >> 16) & 0xff] << 8) |
+      (char_reverse_lookup_table[(i >> 24) & 0xff]);
 }
 */
 
 static unsigned long reverse_unsigned_long(unsigned long l) {
-  return (CharReverseLookupTable[l & 0xff] << 56) |
-      (CharReverseLookupTable[(l >> 8) & 0xff] << 48) |
-      (CharReverseLookupTable[(l >> 16) & 0xff] << 40) |
-      (CharReverseLookupTable[(l >> 24) & 0xff] << 32) |
-      (CharReverseLookupTable[(l >> 32) & 0xff] << 24) |
-      (CharReverseLookupTable[(l >> 40) & 0xff] << 16) |
-      (CharReverseLookupTable[(l >> 48) & 0xff] << 8) |
-      (CharReverseLookupTable[(l >> 56) & 0xff]);
+  return (char_reverse_lookup_table[l & 0xff] << 56) |
+      (char_reverse_lookup_table[(l >> 8) & 0xff] << 48) |
+      (char_reverse_lookup_table[(l >> 16) & 0xff] << 40) |
+      (char_reverse_lookup_table[(l >> 24) & 0xff] << 32) |
+      (char_reverse_lookup_table[(l >> 32) & 0xff] << 24) |
+      (char_reverse_lookup_table[(l >> 40) & 0xff] << 16) |
+      (char_reverse_lookup_table[(l >> 48) & 0xff] << 8) |
+      (char_reverse_lookup_table[(l >> 56) & 0xff]);
 }
 
 /*
@@ -269,24 +277,24 @@ static void bitarray_reverse_on_steroids(bitarray_t * bitarray, size_t bit_offse
   WORD x, y, mask1, mask2, temp;
   while (leftword < rightword) {
   if (leftexcess < rightexcess) {
-    mask1 = -1 << (WORD_SIZE_IN_BITS - leftexcess); // desired mask is a char with exactly #leftexcess ones followed by zeroes. used to preserve selected bits and destroy rest.
-    mask2 = ~(-1 >> (WORD_SIZE_IN_BITS - leftexcess)); // desired mask is a char that ends with exactly #leftexcess zeroes. all preceding bits are ones. used to destroy certain bits and preserve rest.
+    mask1 = MINUS_ONE_WORD << (WORD_SIZE_IN_BITS - leftexcess); // desired mask is a char with exactly #leftexcess ones followed by zeroes. used to preserve selected bits and destroy rest.
+    mask2 = MINUS_ONE_WORD >> (WORD_SIZE_IN_BITS - leftexcess); // desired mask is a char that ends with exactly #leftexcess zeroes. all preceding bits are ones. used to destroy certain bits and preserve rest.
     x = (REVERSE_WORD(*leftword) & mask1) >> (rightexcess - leftexcess);
     y = (REVERSE_WORD(*rightword) & (mask1 >> (WORD_SIZE_IN_BITS - rightexcess))) >> (rightexcess - leftexcess);
-    *leftword = (*leftword & mask2) | y;
-    *rightword = (*rightword & (mask2 << (WORD_SIZE_IN_BITS - rightexcess))) | x;
+    *leftword = (*leftword & ~mask2) | y;
+    *rightword = (*rightword & ~(mask2 << (WORD_SIZE_IN_BITS - rightexcess))) | x;
 
     rightexcess -= leftexcess;
     leftword++;
     leftexcess = WORD_SIZE_IN_BITS;
 
   } else if (leftexcess > rightexcess) {
-    mask1 = -1 >> (WORD_SIZE_IN_BITS - rightexcess); // desired mask is a char that ends with exactly #rightexcess ones. all preceding bits are zeroes. used to preserve selected bits and destroy rest.
-    mask2 = ~(-1 << (WORD_SIZE_IN_BITS - rightexcess)); // desired mask is a char with exactly #rightexcess zeroes followed by ones. used to destroy selected bits and destroy rest.
+    mask1 = MINUS_ONE_WORD >> (WORD_SIZE_IN_BITS - rightexcess); // desired mask is a char that ends with exactly #rightexcess ones. all preceding bits are zeroes. used to preserve selected bits and destroy rest.
+    mask2 = MINUS_ONE_WORD << (WORD_SIZE_IN_BITS - rightexcess); // desired mask is a char with exactly #rightexcess ones followed by zeroes. Its complement is used to destroy selected bits and preserve rest.
     x = (REVERSE_WORD(*leftword) & (mask1 << (WORD_SIZE_IN_BITS - leftexcess))) << (leftexcess - rightexcess);
     y = (REVERSE_WORD(*rightword) & mask1) << (leftexcess - rightexcess);
-    *leftword = (*leftword & (mask2 >> (WORD_SIZE_IN_BITS - leftexcess))) | y;
-    *rightword = (*rightword & mask2) | x;
+    *leftword = (*leftword & ~(mask2 >> (WORD_SIZE_IN_BITS - leftexcess))) | y;
+    *rightword = (*rightword & ~mask2) | x;
 
     leftexcess -= rightexcess;
     rightword--;
@@ -294,7 +302,7 @@ static void bitarray_reverse_on_steroids(bitarray_t * bitarray, size_t bit_offse
 
   } else {  // case 3: leftexcess == rightexcess
     if (leftexcess != 0) {
-      mask1 = -1 >> (WORD_SIZE_IN_BITS - leftexcess); // desired mask is a char that ends with exactly #leftexcess == #rightexcess ones. all preceding bits are zeroes. used to preserve selected bits and destroy others.
+      mask1 = MINUS_ONE_WORD >> (WORD_SIZE_IN_BITS - leftexcess); // desired mask is a char that ends with exactly #leftexcess == #rightexcess ones. all preceding bits are zeroes. used to preserve selected bits and destroy others.
       mask2 = ~mask1; 
       x = REVERSE_WORD(*leftword & mask1);
       y = REVERSE_WORD(*rightword) & mask1;
@@ -315,10 +323,10 @@ static void bitarray_reverse_on_steroids(bitarray_t * bitarray, size_t bit_offse
   if (leftword == rightword) {
     size_t bit_offset2, bit_length2;
     if (leftexcess == WORD_SIZE_IN_BITS) {
-      bit_offset2 = (leftword - (bitarray->buf) - 1) * WORD_SIZE_IN_BITS;
+      bit_offset2 = (leftword - (bitarray->buf)) * WORD_SIZE_IN_BITS;
       bit_length2 = rightexcess;
     } else {
-      bit_offset2 = ((leftword - (bitarray->buf)) * WORD_SIZE_IN_BITS) - leftexcess;
+      bit_offset2 = ((leftword - (bitarray->buf) + 1) * WORD_SIZE_IN_BITS) - leftexcess;
       bit_length2 = leftexcess;
     }
     bitarray_reverse(bitarray, bit_offset2, bit_length2);}
@@ -400,8 +408,3 @@ static size_t modulo(const ssize_t n, const size_t m) {
   assert(result >= 0);
   return (size_t)result;
 }
-
-inline static WORD bitmask(const size_t bit_index) {
-  return ((WORD) 1) << (bit_index % WORD_SIZE_IN_BITS);
-}
-
