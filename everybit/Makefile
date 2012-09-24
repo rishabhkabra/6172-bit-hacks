@@ -56,8 +56,8 @@ PRODUCT = everybit
 
 # What we're building with
 CC = gcc
-CFLAGS = -std=c99 -Wall -m64
-LDFLAGS = 
+CFLAGS = -std=c99 -Wall -m64 -ftest-coverage -fprofile-arcs
+LDFLAGS = -ftest-coverage -fprofile-arcs
 
 # We need to link against the timing library for whatever OS we're on.
 PLATFORM = $(shell uname)
