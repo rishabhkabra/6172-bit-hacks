@@ -314,7 +314,7 @@ static inline void address_right_word(WORD * leftword, WORD * rightword, size_t 
 }
 */
 
-static void bitarray_reverse_on_steroids(bitarray_t * bitarray, size_t bit_offset, const size_t bit_length) {
+static void bitarray_reverse_faster(bitarray_t * bitarray, size_t bit_offset, const size_t bit_length) {
 
   assert(bit_offset + bit_length <= bitarray->bit_sz);
 
@@ -405,33 +405,27 @@ static void bitarray_reverse_on_steroids(bitarray_t * bitarray, size_t bit_offse
 
 
 void bitarray_rotate(bitarray_t *const bitarray, const size_t bit_offset, const size_t bit_length, const ssize_t bit_right_amount) {
-  // implements bitarray rotation via clever (A^R + B^R)^R 
-  // algorithm discussed in project 1 handout
+  // Implements bitarray rotation via reversal algorithm:
+  //   Given a bitarray B to be rotated left by bit_left_amount,
+  //   let B be the left-to-right concatenation, L + R, of 
+  //   a bit_left_amount-size subarray L and a (bitarray_length - bit_left_amount)-size
+  //   subarray R. 
+  //   Then rotate(B) by bit_left_amount = reverse(reverse(L) + reverse(R))
   assert(bit_offset + bit_length <= bitarray->bit_sz);
-  
-  //printf("bitarray_rotate() is being called.\n");
-  //printf("bitarray: %p\n", bitarray);
-  //printf("bit_offset: %d\n",(int) bit_offset);
-  //printf("bit_length: %d\n", (int) bit_length);
-  //printf("bit_right_amount: %d\n", (int) bit_right_amount); 
-  
+ 
   if (bit_length == 0) {
     return;
   }
 
   const size_t bit_left_amount = modulo(-bit_right_amount, bit_length);
-  
-  //printf("Rotating A...\n"); 
-  bitarray_reverse_on_steroids(bitarray, bit_offset, bit_left_amount);
+  if (bit_left_amount == 0){
+    return;
+  }
 
-  //printf("Rotating B...\n");
-  bitarray_reverse_on_steroids(bitarray, bit_offset + bit_left_amount, bit_length - bit_left_amount);
-  
-  //printf("Rotating A+B...\n");
-  bitarray_reverse_on_steroids(bitarray, bit_offset, bit_length);
-  
-  //printf("Concluded rotation.\n");
-}
+  bitarray_reverse_faster(bitarray, bit_offset, bit_left_amount); // reverse(L)
+  bitarray_reverse_faster(bitarray, bit_offset + bit_left_amount, bit_length - bit_left_amount); // reverse(R)
+  bitarray_reverse_faster(bitarray, bit_offset, bit_length); // reverse(reverse(L) + reverse(R))
+}  
 
 static size_t modulo(const ssize_t n, const size_t m) {
   const ssize_t signed_m = (ssize_t)m;
