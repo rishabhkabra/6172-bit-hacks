@@ -33,7 +33,7 @@
 #include "./tests.h"
 
 
-#define BUF_SIZE 4096
+#define BUF_SIZE 32768
 
 
 // ******************************* Prototypes *******************************
