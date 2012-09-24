@@ -315,6 +315,13 @@ static const unsigned long unsigned_long_bitmask_with_trailing_ones_lookup_table
   0x1fffffffffffffff, 0x3fffffffffffffff, 0x7fffffffffffffff, 0xffffffffffffffff, 
 };
 
+/*
+static inline void address_left_word(WORD * leftword, WORD * rightword, size_t leftexcess, size_t rightexcess, WORD x, WORD y, WORD mask1, WORD mask2) {
+}
+
+static inline void address_right_word(WORD * leftword, WORD * rightword, size_t leftexcess, size_t rightexcess, WORD x, WORD y, WORD mask1, WORD mask2) {
+}
+*/
 
 static void bitarray_reverse_on_steroids(bitarray_t * bitarray, size_t bit_offset, const size_t bit_length) {
 
@@ -334,51 +341,61 @@ static void bitarray_reverse_on_steroids(bitarray_t * bitarray, size_t bit_offse
   WORD * rightword = bitarray->buf + (bit_offset + bit_length - 1) / WORD_SIZE_IN_BITS;
 
   WORD x, y, mask1, mask2, temp;
-  while (leftword < rightword) {
-  if (leftexcess < rightexcess) {
-    mask1 = BEGINNING_ONES_BITMASK(leftexcess); // desired mask is a char with exactly #leftexcess ones followed by zeroes. used to preserve selected bits and destroy rest.
-    mask2 = TRAILING_ONES_BITMASK(leftexcess); // desired mask is a char that ends with exactly #leftexcess ones. all preceding bits are zeroes. Its complement is used to destroy certain bits and preserve rest.
-    x = (REVERSE_WORD(*leftword) & mask1) >> (rightexcess - leftexcess);
-    y = (REVERSE_WORD(*rightword) & (mask1 >> (WORD_SIZE_IN_BITS - rightexcess))) >> (rightexcess - leftexcess);
-    *leftword = (*leftword & ~mask2) | y;
-    *rightword = (*rightword & ~(mask2 << (WORD_SIZE_IN_BITS - rightexcess))) | x;
+  
+  if (leftexcess != rightexcess) { //Case 1: subarray to be reversed is asymmetric.
+    while (leftword < rightword) {
+      if (leftexcess < rightexcess) {
+          mask1 = BEGINNING_ONES_BITMASK(leftexcess); // desired mask is a WORD with exactly #leftexcess ones followed by zeros.
+          //used to preserve selected bits and destroy rest.
+          mask2 = TRAILING_ONES_BITMASK(leftexcess); // desired mask is a WORD that ends with exactly #leftexcess ones. all preceding bits are zeroes. 
+          //Its complement is used to destroy certain bits and preserve rest.
 
-    rightexcess -= leftexcess;
+          x = (REVERSE_WORD(*leftword) & mask1) >> (rightexcess - leftexcess);
+          y = (REVERSE_WORD(*rightword) & (mask1 >> (WORD_SIZE_IN_BITS - rightexcess))) >> (rightexcess - leftexcess);
+          *leftword = (*leftword & ~mask2) | y;
+          *rightword = (*rightword & ~(mask2 << (WORD_SIZE_IN_BITS - rightexcess))) | x;
+
+          rightexcess -= leftexcess;
+          leftword++;
+          leftexcess = WORD_SIZE_IN_BITS;
+
+      } else {
+          mask1 = TRAILING_ONES_BITMASK(rightexcess); // desired mask is a char that ends with exactly #rightexcess ones. all preceding bits are zeroes. 
+          //used to preserve selected bits and destroy rest.
+          mask2 = BEGINNING_ONES_BITMASK(rightexcess); // desired mask is a char with exactly #rightexcess ones followed by zeroes. 
+          //Its complement is used to destroy selected bits and preserve rest.
+
+          x = (REVERSE_WORD(*leftword) & (mask1 << (WORD_SIZE_IN_BITS - leftexcess))) << (leftexcess - rightexcess);
+          y = (REVERSE_WORD(*rightword) & mask1) << (leftexcess - rightexcess);
+          *leftword = (*leftword & ~(mask2 >> (WORD_SIZE_IN_BITS - leftexcess))) | y;
+          *rightword = (*rightword & ~mask2) | x;
+
+          leftexcess -= rightexcess;
+          rightword--;
+          rightexcess = WORD_SIZE_IN_BITS;
+      }
+    }
+  } else { // Case 2: leftexcess == righexcess. Subarray to be reversed is symmetric.
+    mask1 = TRAILING_ONES_BITMASK(leftexcess); // desired mask is a char that ends with exactly #leftexcess == #rightexcess ones. all preceding bits are zeroes. 
+    //used to preserve selected bits and destroy others.
+    mask2 = ~mask1; 
+    x = REVERSE_WORD(*leftword & mask1);
+    y = REVERSE_WORD(*rightword) & mask1;
+    *leftword = (*leftword & mask2) | y;
+    *rightword = (*rightword & REVERSE_WORD(mask2)) | x;
     leftword++;
-    leftexcess = WORD_SIZE_IN_BITS;
-
-  } else if (leftexcess > rightexcess) {
-    mask1 = TRAILING_ONES_BITMASK(rightexcess); // desired mask is a char that ends with exactly #rightexcess ones. all preceding bits are zeroes. used to preserve selected bits and destroy rest.
-    mask2 = BEGINNING_ONES_BITMASK(rightexcess); // desired mask is a char with exactly #rightexcess ones followed by zeroes. Its complement is used to destroy selected bits and preserve rest.
-    x = (REVERSE_WORD(*leftword) & (mask1 << (WORD_SIZE_IN_BITS - leftexcess))) << (leftexcess - rightexcess);
-    y = (REVERSE_WORD(*rightword) & mask1) << (leftexcess - rightexcess);
-    *leftword = (*leftword & ~(mask2 >> (WORD_SIZE_IN_BITS - leftexcess))) | y;
-    *rightword = (*rightword & ~mask2) | x;
-
-    leftexcess -= rightexcess;
     rightword--;
-    rightexcess = WORD_SIZE_IN_BITS;
-
-  } else {  // case 3: leftexcess == rightexcess
-    if (leftexcess != 0) {
-      mask1 = TRAILING_ONES_BITMASK(leftexcess); // desired mask is a char that ends with exactly #leftexcess == #rightexcess ones. all preceding bits are zeroes. used to preserve selected bits and destroy others.
-      mask2 = ~mask1; 
-      x = REVERSE_WORD(*leftword & mask1);
-      y = REVERSE_WORD(*rightword) & mask1;
-      *leftword = (*leftword & mask2) | y;
-      *rightword = (*rightword & REVERSE_WORD(mask2)) | x;
-    } else {
+    while (leftword < rightword) {
       temp = REVERSE_WORD(*leftword);
       *leftword = REVERSE_WORD(*rightword);
       *rightword = temp;
+      leftword++;
+      rightword--;
     }
-    leftword++;
     leftexcess = WORD_SIZE_IN_BITS;
-    rightword--;
     rightexcess = WORD_SIZE_IN_BITS;
   }
-  }
-
+  
   if (leftword == rightword) {
     size_t bit_offset2, bit_length2;
     if (leftexcess == WORD_SIZE_IN_BITS) {
