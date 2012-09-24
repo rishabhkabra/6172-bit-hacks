@@ -389,7 +389,7 @@ void bitarray_rotate(bitarray_t *const bitarray, const size_t bit_offset, const 
   //   let B be the left-to-right concatenation, L + R, of 
   //   a bit_left_amount-size subarray L and a (bitarray_length - bit_left_amount)-size
   //   subarray R. 
-  //   Then reverse(B) = reverse(reverse(L) + reverse(R))
+  //   Then rotate(B) by bit_left_amount = reverse(reverse(L) + reverse(R))
   assert(bit_offset + bit_length <= bitarray->bit_sz);
  
   if (bit_length == 0) {
