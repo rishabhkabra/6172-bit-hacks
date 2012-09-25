@@ -42,13 +42,11 @@
 #define MINUS_ONE_WORD (0xffffffffffffffff)
 #define REVERSE_WORD(word) (reverse_unsigned_long(word))
 
-#define SINGLE_ONE_BITMASK(index) (unsigned_long_bitmask(index))
+#define SINGLE_ONE_BITMASK(index) (unsigned_long_bitmask(index)) //the desired bitmask is a WORD containing a single 1 at the index postion.
 //#define SINGLE_ONE_BITMASK(index) (bitmask_lookup_table[index % WORD_SIZE_IN_BITS]) //experimental. uses lookup table instead of inline method. no performance improvement.
 
-//#define BEGINNING_ONES_BITMASK(index) MINUS_ONE_WORD << (WORD_SIZE_IN_BITS - index);
-//#define TRAILING_ONES_BITMASK(index) MINUS_ONE_WORD >> (WORD_SIZE_IN_BITS - index);
-#define BEGINNING_ONES_BITMASK(index) (unsigned_long_bitmask_with_beginning_ones_lookup_table[index]) //experimental. uses lookup table instead of bitshifting MINUS_ONE_WORD. verdict: performance boost on all sizes!
-#define TRAILING_ONES_BITMASK(index) (unsigned_long_bitmask_with_trailing_ones_lookup_table[index]) //experimental. uses lookup table instead of bitshifting MINUS_ONE_WORD. verdict: performance boost on all sizes!
+#define BEGINNING_ONES_BITMASK(index) (unsigned_long_bitmask_with_beginning_ones_lookup_table[index]) //the desired bitmask is a WORD that begins with exactly index ones; the remaining bits are all zeroes.
+#define TRAILING_ONES_BITMASK(index) (unsigned_long_bitmask_with_trailing_ones_lookup_table[index]) //the desired bitmask is a WORD that ends with exactly index ones; the preceding bits are all zeroes.
 
 // Concrete data type representing an array of bits.
 struct bitarray {
@@ -142,7 +140,7 @@ void bitarray_free(bitarray_t *const bitarray) {
   free(bitarray);
 }
 
-
+/*
 static const unsigned long bitmask_lookup_table[64] = 
 {
   0x8000000000000000, 0x4000000000000000, 0x2000000000000000, 0x1000000000000000, 
@@ -162,9 +160,10 @@ static const unsigned long bitmask_lookup_table[64] =
   0x80, 0x40, 0x20, 0x10, 
   0x8, 0x4, 0x2, 0x1
 };
+*/
 
-inline static unsigned long unsigned_long_bitmask(const size_t bit_index) {
-  return ((unsigned long) 1) << (63 - (bit_index % WORD_SIZE_IN_BITS));
+inline static WORD unsigned_long_bitmask(const size_t bit_index) {
+  return ((WORD) 1) << (63 - (bit_index % WORD_SIZE_IN_BITS));
 }
 
 
@@ -172,8 +171,7 @@ size_t bitarray_get_bit_sz(const bitarray_t *const bitarray) {
   return bitarray->bit_sz;
 }
 
-// TODO: inline this
-bool bitarray_get(const bitarray_t *const bitarray, const size_t bit_index) {
+inline bool bitarray_get(const bitarray_t *const bitarray, const size_t bit_index) {
   assert(bit_index < bitarray->bit_sz);
 
   // We're storing bits in packed form, 8 per byte.  So to get the nth
@@ -189,8 +187,7 @@ bool bitarray_get(const bitarray_t *const bitarray, const size_t bit_index) {
              true : false;
 }
 
-// TODO: inline this
-void bitarray_set(bitarray_t *const bitarray,
+inline void bitarray_set(bitarray_t *const bitarray,
                   const size_t bit_index,
                   const bool value) {
   assert(bit_index < bitarray->bit_sz);
@@ -306,13 +303,6 @@ static const unsigned long unsigned_long_bitmask_with_trailing_ones_lookup_table
   0x1fffffffffffffff, 0x3fffffffffffffff, 0x7fffffffffffffff, 0xffffffffffffffff, 
 };
 
-/*
-static inline void address_left_word(WORD * leftword, WORD * rightword, size_t leftexcess, size_t rightexcess, WORD x, WORD y, WORD mask1, WORD mask2) {
-}
-
-static inline void address_right_word(WORD * leftword, WORD * rightword, size_t leftexcess, size_t rightexcess, WORD x, WORD y, WORD mask1, WORD mask2) {
-}
-*/
 
 static void bitarray_reverse_faster(bitarray_t * bitarray, size_t bit_offset, const size_t bit_length) {
 
@@ -372,7 +362,7 @@ static void bitarray_reverse_faster(bitarray_t * bitarray, size_t bit_offset, co
     }
   } else { // Case 3: leftexcess == righexcess. Subarray to be reversed is symmetric.
       WORD leftreplacement, rightreplacement;
-      WORD temp = TRAILING_ONES_BITMASK(leftexcess); // desired mask is a char that ends with exactly #leftexcess == #rightexcess ones. all preceding bits are zeroes. 
+      WORD temp = TRAILING_ONES_BITMASK(leftexcess);
       rightreplacement = REVERSE_WORD(*leftword & temp);
       leftreplacement = REVERSE_WORD(*rightword) & temp;
 
