@@ -90,7 +90,7 @@ $(shell echo debug >.buildmode)
 endif
 else
 # We want release mode.
-CFLAGS += -O3 -DNDEBUG
+CFLAGS += -Ofast -DNDEBUG
 ifneq ($(OLD_MODE),release)
 $(shell echo release >.buildmode)
 endif
