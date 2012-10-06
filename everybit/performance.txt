@@ -4,7 +4,8 @@
 4) Using unsigned long instead of char as the base word type for the bitarray buf: 0.000141s --- 2.27x (after bug fix)
 5) Added lookup tables for bitmasks used in bitarray_reverse_on_steroids instead of using standard bit shifts: 0.000134s --- 1.05x
 6) Rewrote bitarray_reverse_on_steroids with better branch flow, loop unrolling, and fewer REVERSE_WORD calls: 0.000089s --- 1.51x
-7) Improved reverse_unsigned_long by using a char pointer to access the bytes in each long faster: 0.000078x --- 1.14x
+7) Improved reverse_unsigned_long by using a char pointer to access the bytes in each long faster: 0.000078s --- 1.14x
+8) Improved bitarray_reverse_faster by reducing operations: 0.000075s --- 1.04x
 
 Unfruitful attempts:
 - using int as WORD instead of long. longs were clearly faster.
