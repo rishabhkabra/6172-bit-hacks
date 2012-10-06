@@ -116,13 +116,13 @@ static size_t modulo(const ssize_t n, const size_t m);
 
 bitarray_t *bitarray_new(const size_t bit_sz) {
   // Allocate an underlying buffer of ceil(bit_sz/8) bytes.
-  WORD *const buf = calloc(WORD_SIZE_IN_BYTES, bit_sz / WORD_SIZE_IN_BITS + ((bit_sz % WORD_SIZE_IN_BITS == 0) ? 0 : 1));
+  WORD *const buf = (WORD *) calloc(WORD_SIZE_IN_BYTES, bit_sz / WORD_SIZE_IN_BITS + ((bit_sz % WORD_SIZE_IN_BITS == 0) ? 0 : 1));
   if (buf == NULL) {
     return NULL;
   }
 
   // Allocate space for the struct.
-  bitarray_t *const bitarray = malloc(sizeof(struct bitarray));
+  bitarray_t *const bitarray = (bitarray_t *) malloc(sizeof(struct bitarray));
   if (bitarray == NULL) {
     free(buf);
     return NULL;
@@ -272,8 +272,9 @@ static unsigned long reverse_unsigned_long(unsigned long l) {
       (char_reverse_lookup_table[p[1]] << 48) |
       (char_reverse_lookup_table[p[0]] << 56); //p[0] gives the 8 least significant bits of l
 }
+
 /*
-  static unsigned long reverse_unsigned_long2(unsigned long l) {
+  static unsigned long reverse_unsigned_long3(unsigned long l) {
   return (char_reverse_lookup_table[l & 0xff] << 56) |
       (char_reverse_lookup_table[(l >> 8) & 0xff] << 48) |
       (char_reverse_lookup_table[(l >> 16) & 0xff] << 40) |

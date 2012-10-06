@@ -90,7 +90,7 @@ $(shell echo debug >.buildmode)
 endif
 else
 # We want release mode.
-CFLAGS += -Ofast -DNDEBUG
+CFLAGS += -Ofast -DNDEBUG -funsafe-loop-optimizations -fsched2-use-superblocks -fipa-pta -ftree-ch
 ifneq ($(OLD_MODE),release)
 $(shell echo release >.buildmode)
 endif
