@@ -48,6 +48,8 @@
 #define BEGINNING_ONES_BITMASK(index) (unsigned_long_bitmask_with_beginning_ones_lookup_table[index]) //the desired bitmask is a WORD that begins with exactly index ones; the remaining bits are all zeroes.
 #define TRAILING_ONES_BITMASK(index) (unsigned_long_bitmask_with_trailing_ones_lookup_table[index]) //the desired bitmask is a WORD that ends with exactly index ones; the preceding bits are all zeroes.
 
+#define REVERSE_FASTER_COARSENESS 2
+
 // Concrete data type representing an array of bits.
 struct bitarray {
   // The number of bits represented by this bit array.
@@ -162,8 +164,15 @@ static const unsigned long bitmask_lookup_table[64] =
 };
 */
 
-inline static WORD unsigned_long_bitmask(const size_t bit_index) {
-  return ((WORD) 1) << (63 - (bit_index % WORD_SIZE_IN_BITS));
+/*
+inline static unsigned int unsigned_int_bitmask(const size_t bit_index) {
+  return ((unsigned int) 1) << (31 - (bit_index % 32));
+}
+*/
+
+//static const WORD one = (WORD) 1;
+inline static unsigned long unsigned_long_bitmask(const size_t bit_index) {
+  return ((unsigned long) 1) << (63 - (bit_index % 64));
 }
 
 
@@ -240,16 +249,31 @@ static const unsigned long char_reverse_lookup_table[256] =
 static char reverse_char(char c) {
   return char_reverse_lookup_table[c]; 
 }
+*/
 
+/*
 static unsigned int reverse_unsigned_int(unsigned int i) {
   return (char_reverse_lookup_table[i & 0xff] << 24) |
       (char_reverse_lookup_table[(i >> 8) & 0xff] << 16) |
       (char_reverse_lookup_table[(i >> 16) & 0xff] << 8) |
       (char_reverse_lookup_table[(i >> 24) & 0xff]);
-}
+};
 */
 
 static unsigned long reverse_unsigned_long(unsigned long l) {
+    
+  unsigned char * p = (unsigned char *) &l;
+  return (char_reverse_lookup_table[p[7]]) | //p[7] gives the 8 most significant 8 bits of l (little endian)
+      (char_reverse_lookup_table[p[6]] << 8) |
+      (char_reverse_lookup_table[p[5]] << 16) |
+      (char_reverse_lookup_table[p[4]] << 24) |
+      (char_reverse_lookup_table[p[3]] << 32) |
+      (char_reverse_lookup_table[p[2]] << 40) |
+      (char_reverse_lookup_table[p[1]] << 48) |
+      (char_reverse_lookup_table[p[0]] << 56); //p[0] gives the 8 least significant bits of l
+}
+/*
+  static unsigned long reverse_unsigned_long2(unsigned long l) {
   return (char_reverse_lookup_table[l & 0xff] << 56) |
       (char_reverse_lookup_table[(l >> 8) & 0xff] << 48) |
       (char_reverse_lookup_table[(l >> 16) & 0xff] << 40) |
@@ -257,9 +281,37 @@ static unsigned long reverse_unsigned_long(unsigned long l) {
       (char_reverse_lookup_table[(l >> 32) & 0xff] << 24) |
       (char_reverse_lookup_table[(l >> 40) & 0xff] << 16) |
       (char_reverse_lookup_table[(l >> 48) & 0xff] << 8) |
-      (char_reverse_lookup_table[(l >> 56) & 0xff]);
+      (char_reverse_lookup_table[(l >> 56) & 0xff]);    
 } // reference: Bit Twiddling Hacks, by Sean Eron Anderson (seander@cs.stanford.edu).
+*/
 
+/*
+static const unsigned int unsigned_int_bitmask_with_beginning_ones_lookup_table[33] =
+{
+      0x0,
+      0x80000000, 0xc0000000, 0xe0000000, 0xf0000000, 
+      0xf8000000, 0xfc000000, 0xfe000000, 0xff000000, 
+      0xff800000, 0xffc00000, 0xffe00000, 0xfff00000, 
+      0xfff80000, 0xfffc0000, 0xfffe0000, 0xffff0000, 
+      0xffff8000, 0xffffc000, 0xffffe000, 0xfffff000, 
+      0xfffff800, 0xfffffc00, 0xfffffe00, 0xffffff00, 
+      0xffffff80, 0xffffffc0, 0xffffffe0, 0xfffffff0, 
+      0xfffffff8, 0xfffffffc, 0xfffffffe, 0xffffffff, 
+};
+
+static const unsigned int unsigned_int_bitmask_with_trailing_ones_lookup_table[33] = 
+{
+  0x0,
+  0x1, 0x3, 0x7, 0xf, 
+  0x1f, 0x3f, 0x7f, 0xff, 
+  0x1ff, 0x3ff, 0x7ff, 0xfff, 
+  0x1fff, 0x3fff, 0x7fff, 0xffff, 
+  0x1ffff, 0x3ffff, 0x7ffff, 0xfffff, 
+  0x1fffff, 0x3fffff, 0x7fffff, 0xffffff, 
+  0x1ffffff, 0x3ffffff, 0x7ffffff, 0xfffffff, 
+  0x1fffffff, 0x3fffffff, 0x7fffffff, 0xffffffff
+};
+*/
 
 static const unsigned long unsigned_long_bitmask_with_beginning_ones_lookup_table[65] = 
 {
@@ -308,7 +360,7 @@ static void bitarray_reverse_faster(bitarray_t * bitarray, size_t bit_offset, co
 
   assert(bit_offset + bit_length <= bitarray->bit_sz);
 
-  if (bit_length <= WORD_SIZE_IN_BITS * 2) {
+  if (bit_length <= WORD_SIZE_IN_BITS * REVERSE_FASTER_COARSENESS) {
     bitarray_reverse(bitarray, bit_offset, bit_length);
     return;
   }
