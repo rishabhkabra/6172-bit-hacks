@@ -376,27 +376,39 @@ static void bitarray_reverse_faster(bitarray_t * bitarray, size_t bit_offset, co
   
   if (leftexcess < rightexcess) { //Case 1: subarray to be reversed is asymmetric and leftexcess < rightexcess
     WORD rightreplacement, left1replacement, left2replacement;
+    rightreplacement = (*leftword & TRAILING_ONES_BITMASK(leftexcess)) << (rightexcess - leftexcess);
+    rightreplacement |= (*(leftword+1) & BEGINNING_ONES_BITMASK(rightexcess - leftexcess)) >> (WORD_SIZE_IN_BITS - (rightexcess - leftexcess));
+    rightreplacement = REVERSE_WORD(rightreplacement);
+
+    left1replacement = REVERSE_WORD(*rightword & BEGINNING_ONES_BITMASK(rightexcess));
+    left2replacement = left1replacement << (WORD_SIZE_IN_BITS - (rightexcess - leftexcess));
+    left1replacement = left1replacement >> (rightexcess - leftexcess);
+
+    *leftword = (*leftword & ~(TRAILING_ONES_BITMASK(leftexcess))) | left1replacement;
+    leftword++;
+    *leftword = (*leftword & ~(BEGINNING_ONES_BITMASK(rightexcess - leftexcess))) | left2replacement;
+    leftexcess = WORD_SIZE_IN_BITS - (rightexcess - leftexcess);
+    *rightword = (*rightword & ~(BEGINNING_ONES_BITMASK(rightexcess))) | rightreplacement;
+    rightword--;
+    rightexcess = WORD_SIZE_IN_BITS;
     while (rightword - leftword > 1) { // condition ensures rightword and leftword are not adjacent
-        rightreplacement = (*leftword & TRAILING_ONES_BITMASK(leftexcess)) << (rightexcess - leftexcess);
-        rightreplacement |= (*(leftword+1) & BEGINNING_ONES_BITMASK(rightexcess - leftexcess)) >> (WORD_SIZE_IN_BITS - (rightexcess - leftexcess));
-        rightreplacement = REVERSE_WORD(rightreplacement);
+    rightreplacement = (*leftword & TRAILING_ONES_BITMASK(leftexcess)) << (rightexcess - leftexcess);
+    rightreplacement |= (*(leftword+1) & BEGINNING_ONES_BITMASK(rightexcess - leftexcess)) >> (WORD_SIZE_IN_BITS - (rightexcess - leftexcess));
+    rightreplacement = REVERSE_WORD(rightreplacement);
 
-        left1replacement = REVERSE_WORD(*rightword & BEGINNING_ONES_BITMASK(rightexcess));
-        left2replacement = left1replacement << (WORD_SIZE_IN_BITS - (rightexcess - leftexcess));
-        left1replacement = left1replacement >> (rightexcess - leftexcess);
+    left1replacement = REVERSE_WORD(*rightword & BEGINNING_ONES_BITMASK(rightexcess));
+    left2replacement = left1replacement << (WORD_SIZE_IN_BITS - (rightexcess - leftexcess));
+    left1replacement = left1replacement >> (rightexcess - leftexcess);
 
-        *leftword = (*leftword & ~(TRAILING_ONES_BITMASK(leftexcess))) | left1replacement;
-        leftword++;
-        *leftword = (*leftword & ~(BEGINNING_ONES_BITMASK(rightexcess - leftexcess))) | left2replacement;
-        leftexcess = WORD_SIZE_IN_BITS - (rightexcess - leftexcess);
-        *rightword = (*rightword & ~(BEGINNING_ONES_BITMASK(rightexcess))) | rightreplacement;
-        rightword--;
-        rightexcess = WORD_SIZE_IN_BITS;
+    *leftword = (*leftword & ~(TRAILING_ONES_BITMASK(leftexcess))) | left1replacement;
+    leftword++;
+    *leftword = (*leftword & ~(BEGINNING_ONES_BITMASK(rightexcess - leftexcess))) | left2replacement;
+    *rightword = (*rightword & ~(BEGINNING_ONES_BITMASK(rightexcess))) | rightreplacement;
+    rightword--;
     }
 
   } else if (leftexcess > rightexcess) { //Case 2: subarray to be reversed is asymmetric and leftexcess > rightexcess
     WORD leftreplacement, right1replacement, right2replacement;
-    while(rightword - leftword > 1) {
       leftreplacement = (*rightword & BEGINNING_ONES_BITMASK(rightexcess)) >> (leftexcess - rightexcess);
       leftreplacement |= (*(rightword-1) & TRAILING_ONES_BITMASK(leftexcess - rightexcess)) << (WORD_SIZE_IN_BITS - (leftexcess - rightexcess));
       leftreplacement = REVERSE_WORD(leftreplacement);
@@ -412,6 +424,20 @@ static void bitarray_reverse_faster(bitarray_t * bitarray, size_t bit_offset, co
       *leftword = (*leftword & ~(TRAILING_ONES_BITMASK(leftexcess))) | leftreplacement;
       leftword++;
       leftexcess = WORD_SIZE_IN_BITS;
+      while(rightword - leftword > 1) {
+        leftreplacement = (*rightword & BEGINNING_ONES_BITMASK(rightexcess)) >> (leftexcess - rightexcess);
+        leftreplacement |= (*(rightword-1) & TRAILING_ONES_BITMASK(leftexcess - rightexcess)) << (WORD_SIZE_IN_BITS - (leftexcess - rightexcess));
+        leftreplacement = REVERSE_WORD(leftreplacement);
+
+        right1replacement = REVERSE_WORD(*leftword & TRAILING_ONES_BITMASK(leftexcess));
+        right2replacement = right1replacement >> (WORD_SIZE_IN_BITS - (leftexcess - rightexcess));
+        right1replacement = right1replacement << (leftexcess - rightexcess);
+
+        *rightword = (*rightword & ~(BEGINNING_ONES_BITMASK(rightexcess))) | right1replacement;
+        rightword--;
+        *rightword = (*rightword & ~(TRAILING_ONES_BITMASK(leftexcess - rightexcess))) | right2replacement;
+        *leftword = (*leftword & ~(TRAILING_ONES_BITMASK(leftexcess))) | leftreplacement;
+        leftword++;
     }
   } else { // Case 3: leftexcess == righexcess. Subarray to be reversed is symmetric.
       WORD leftreplacement, rightreplacement;
