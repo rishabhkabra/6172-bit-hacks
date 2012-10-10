@@ -1,3 +1,9 @@
+"""
+The purpose of make_tests.py is to generate tests for everybit
+binary, which rotates subarrays of bits, such that the state space
+for the binary is explored as exhaustively as possible.
+"""
+
 from argparse import ArgumentParser
 from BitVector import BitVector
 from random import getrandbits, uniform
@@ -127,16 +133,13 @@ def get_noisy_bitarray_size(bitarray_size):
 
 def get_random_bit_string(bit_length):
 	randbits = bin(getrandbits(bit_length))[2:] # [2:] slices off the leading '0b' in bin()'s return value
-	while len(randbits) != bit_length:	# we'll need to pad randbits since bin() truncates leading 0's
-		randbits = '0' + randbits
+	leading_zeroes = bit_length - len(randbits)
+	randbits = ('0' * leading_zeroes) + randbits
 	return randbits
 
 def get_uniform_bit_string(bit, bit_length):
-	uniform_bits = ''
-	while len(uniform_bits) != bit_length:
-		uniform_bits += str(bit)
-	return uniform_bits
-
+	return str(bit) * bit_length
+	
 def get_alternating_bit_string(bit_length):
 	alternating_bits = ''
 	while len(alternating_bits) != bit_length:
@@ -148,10 +151,7 @@ def get_alternating_bit_string(bit_length):
 
 def get_bimodal_bit_string(starting_bit, bit_length):
 	bimodal_bits = ''
-	if starting_bit == 0:
-		ending_bit = 1
-	else:
-		ending_bit = 0
+	ending_bit = 1 - starting_bit
 	while len(bimodal_bits) != bit_length/2:
 		bimodal_bits += str(starting_bit)
 	while len(bimodal_bits) != bit_length:
@@ -213,86 +213,49 @@ def parse_args():
 	parser.add_argument("bitarray_lengths", help="comma-separated lengths of bitarrays to generate tests for")
 	parser.add_argument("num_tests", help="number of tests to generate for each bitarray length specified",type=int)
 	return parser.parse_args()
-	
-# def main():
-# 	args = parse_args()
-# 	global NUM_TESTS_PER_BIT_LENGTH
-# 	global TEST_LIST
-
-# 	NUM_TESTS_PER_BIT_LENGTH = args.num_tests
-# 	bitarray_lengths = map(int, args.bitarray_lengths.split(','))
-
-# 	for length in bitarray_lengths:
-# 		add_bitarray_tests(length)
-# 	test_string = "".join(TEST_LIST)
-	
-# 	default_test_file = open("curr_tests", 'w+')
-# 	archive_test_file = open(str(int(round(time()))) + '_tests', 'w+')
-# 	default_test_file.write(test_string)
-# 	archive_test_file.write(test_string)
 
 def create_standard_test_suite(num_random_tests_per_bitarray_length):
 	test_suite = _TestSuite()
-	# test_suite.add_bitarray_test('10010', 3, 2, 1, '10001')
-	# test_suite.write_tests_to_file('default')
 	for content_type in _BitarrayContentType.CONTENT_TYPES:
 	 	for bitarray_size in _BitarraySize.SIZES:
 			bitarray_size = get_noisy_bitarray_size(bitarray_size)
-			# print "bitarray_size: ", bitarray_size
 			init_bit_string = get_init_bit_string(content_type, bitarray_size)
 			for bit_offset in _BitOffset.OFFSETS:
 				if bit_offset == _BitOffset.MAX:
 					bit_offset = bitarray_size - 1
 				if bit_offset >= bitarray_size:
 					continue
-				# print "bit_offset: ", bit_offset
 				for subarray_length in _BitSubarrayLength.SUBARRAY_LENGTHS:
 					if subarray_length == _BitSubarrayLength.MAX:
 						subarray_length = bitarray_size - bit_offset
-					# print "subarray_length: ", subarray_length
 					for rotation_factor in _BitRotationFactor.ROTATION_FACTORS:
 						bit_right_amount = get_bit_right_amount(rotation_factor, bitarray_size)
-						# print "bit_right_amount: ", bit_right_amount
 						expected_result = get_expected_result(init_bit_string, bit_offset, subarray_length, bit_right_amount)
-						# print "expected_result: ", expected_result
 						test_suite.add_bitarray_test(init_bit_string, bit_offset, subarray_length, bit_right_amount, expected_result)
 				for i in xrange(num_random_tests_per_bitarray_length):
 					max_subarray_length = bitarray_size - bit_offset
 					subarray_length = get_random_subbit_length(max_subarray_length)
-					# print "subarray_length: ", subarray_length
 					for rotation_factor in _BitRotationFactor.ROTATION_FACTORS:
 						bit_right_amount = get_bit_right_amount(rotation_factor, bitarray_size)
-						# print "bit_right_amount: ", bit_right_amount
 						expected_result = get_expected_result(init_bit_string, bit_offset, subarray_length, bit_right_amount)
-						# print "expected_result: ", expected_result
 						test_suite.add_bitarray_test(init_bit_string, bit_offset, subarray_length, bit_right_amount, expected_result)
 			for i in xrange(num_random_tests_per_bitarray_length):
 				bit_offset = get_random_offset(bitarray_size)
-				# print "bit_offset: ", bit_offset
 				for subarray_length in _BitSubarrayLength.SUBARRAY_LENGTHS:
 					if subarray_length == _BitSubarrayLength.MAX:
 						subarray_length = bitarray_size - bit_offset
-					# print "subarray_length: ", subarray_length
 					for rotation_factor in _BitRotationFactor.ROTATION_FACTORS:
 						bit_right_amount = get_bit_right_amount(rotation_factor, bitarray_size)
-						# print "bit_right_amount: ", bit_right_amount
 						expected_result = get_expected_result(init_bit_string, bit_offset, subarray_length, bit_right_amount)
-						# print "expected_result: ", expected_result
 						test_suite.add_bitarray_test(init_bit_string, bit_offset, subarray_length, bit_right_amount, expected_result)
 				for i in xrange(num_random_tests_per_bitarray_length):
 					max_subarray_length = bitarray_size - bit_offset
 					subarray_length = get_random_subbit_length(max_subarray_length)
-					# print "subarray_length: ", subarray_length
 					for rotation_factor in _BitRotationFactor.ROTATION_FACTORS:
 						bit_right_amount = get_bit_right_amount(rotation_factor, bitarray_size)
-						# print "bit_right_amount: ", bit_right_amount
 						expected_result = get_expected_result(init_bit_string, bit_offset, subarray_length, bit_right_amount)
-						# print "expected_result: ", expected_result
 						test_suite.add_bitarray_test(init_bit_string, bit_offset, subarray_length, bit_right_amount, expected_result)
 	test_suite.write_tests_to_file("default")
-
-
-
 
 
 def main():
