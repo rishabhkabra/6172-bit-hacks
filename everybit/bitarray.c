@@ -39,14 +39,11 @@
 #define WORD unsigned long
 #define WORD_SIZE_IN_BYTES (sizeof(WORD))
 #define WORD_SIZE_IN_BITS (WORD_SIZE_IN_BYTES * 8)
-#define MINUS_ONE_WORD (0xffffffffffffffff)
+#define POSITIVE_ONE_WORD (1ULL)
 #define REVERSE_WORD(word) (reverse_unsigned_long(word))
 
-#define SINGLE_ONE_BITMASK(index) (unsigned_long_bitmask(index)) //the desired bitmask is a WORD containing a single 1 at the index postion.
-//#define SINGLE_ONE_BITMASK(index) (bitmask_lookup_table[index % WORD_SIZE_IN_BITS]) //experimental. uses lookup table instead of inline method. no performance improvement.
-
-#define BEGINNING_ONES_BITMASK(index) (unsigned_long_bitmask_with_beginning_ones_lookup_table[index]) //the desired bitmask is a WORD that begins with exactly index ones; the remaining bits are all zeroes.
-#define TRAILING_ONES_BITMASK(index) (unsigned_long_bitmask_with_trailing_ones_lookup_table[index]) //the desired bitmask is a WORD that ends with exactly index ones; the preceding bits are all zeroes.
+#define BEGINNING_ONES_BITMASK(i) (unsigned_long_bitmask_with_beginning_ones_lookup_table[i]) //the desired bitmask is a WORD that begins with exactly i ones; the remaining bits are all zeroes.
+#define TRAILING_ONES_BITMASK(i) (unsigned_long_bitmask_with_trailing_ones_lookup_table[i]) //the desired bitmask is a WORD that ends with exactly i ones; the preceding bits are all zeroes.
 
 #define REVERSE_FASTER_COARSENESS 2
 
@@ -142,37 +139,8 @@ void bitarray_free(bitarray_t *const bitarray) {
   free(bitarray);
 }
 
-/*
-static const unsigned long bitmask_lookup_table[64] = 
-{
-  0x8000000000000000, 0x4000000000000000, 0x2000000000000000, 0x1000000000000000, 
-  0x800000000000000, 0x400000000000000, 0x200000000000000, 0x100000000000000, 
-  0x80000000000000, 0x40000000000000, 0x20000000000000, 0x10000000000000, 
-  0x8000000000000, 0x4000000000000, 0x2000000000000, 0x1000000000000, 
-  0x800000000000, 0x400000000000, 0x200000000000, 0x100000000000, 
-  0x80000000000, 0x40000000000, 0x20000000000, 0x10000000000, 
-  0x8000000000, 0x4000000000, 0x2000000000, 0x1000000000, 
-  0x800000000, 0x400000000, 0x200000000, 0x100000000, 
-  0x80000000, 0x40000000, 0x20000000, 0x10000000, 
-  0x8000000, 0x4000000, 0x2000000, 0x1000000, 
-  0x800000, 0x400000, 0x200000, 0x100000, 
-  0x80000, 0x40000, 0x20000, 0x10000, 
-  0x8000, 0x4000, 0x2000, 0x1000, 
-  0x800, 0x400, 0x200, 0x100, 
-  0x80, 0x40, 0x20, 0x10, 
-  0x8, 0x4, 0x2, 0x1
-};
-*/
-
-/*
-inline static unsigned int unsigned_int_bitmask(const size_t bit_index) {
-  return ((unsigned int) 1) << (31 - (bit_index % 32));
-}
-*/
-
-//static const WORD one = (WORD) 1;
-inline static unsigned long unsigned_long_bitmask(const size_t bit_index) {
-  return ((unsigned long) 1) << (63 - (bit_index % 64));
+inline static WORD single_one_bitmask(const size_t bit_index) {
+  return (POSITIVE_ONE_WORD) << (WORD_SIZE_IN_BITS - 1 - (bit_index % WORD_SIZE_IN_BITS));
 }
 
 
@@ -192,7 +160,7 @@ inline bool bitarray_get(const bitarray_t *const bitarray, const size_t bit_inde
   // to produce either a zero byte (if the bit was 0) or a nonzero byte
   // (if it wasn't).  Finally, we convert that to a boolean.
 
-  return (bitarray->buf[bit_index / WORD_SIZE_IN_BITS] & SINGLE_ONE_BITMASK(bit_index)) ?
+  return (bitarray->buf[bit_index / WORD_SIZE_IN_BITS] & single_one_bitmask(bit_index)) ?
              true : false;
 }
 
@@ -208,7 +176,7 @@ inline void bitarray_set(bitarray_t *const bitarray,
   // get the byte; we then bitwise-and the byte with an appropriate mask
   // to clear out the bit we're about to set.  We bitwise-or the result
   // with a byte that has either a 1 or a 0 in the correct place.
-  WORD mask = SINGLE_ONE_BITMASK(bit_index);
+  WORD mask = single_one_bitmask(bit_index);
   size_t bufindex = bit_index / WORD_SIZE_IN_BITS;
   bitarray->buf[bufindex] = 
       (bitarray->buf[bufindex] & ~mask) |
@@ -243,25 +211,10 @@ static const unsigned long char_reverse_lookup_table[256] =
 #define R4(n) R2(n), R2(n+2*16), R2(n+1*16), R2(n+3*16)
 #define R6(n) R4(n), R4(n+2*4), R4(n+1*4), R4(n+3*4)
   R6(0), R6(2), R6(1), R6(3)
-}; // reference: Bit Twiddling Hacks, by Sean Eron Anderson (seander@cs.stanford.edu). Table definition suggested by Hallvard Furuseth on July 14, 2009.
+}; // reference: Bit Twiddling Hacks, by Sean Eron Anderson (seander@cs.stanford.edu). Table definition suggested by Hallvard Furuseth.
 
-/*
-static char reverse_char(char c) {
-  return char_reverse_lookup_table[c]; 
-}
-*/
 
-/*
-static unsigned int reverse_unsigned_int(unsigned int i) {
-  return (char_reverse_lookup_table[i & 0xff] << 24) |
-      (char_reverse_lookup_table[(i >> 8) & 0xff] << 16) |
-      (char_reverse_lookup_table[(i >> 16) & 0xff] << 8) |
-      (char_reverse_lookup_table[(i >> 24) & 0xff]);
-};
-*/
-
-static unsigned long reverse_unsigned_long(unsigned long l) {
-    
+static unsigned long reverse_unsigned_long(unsigned long l) {    
   unsigned char * p = (unsigned char *) &l;
   return (char_reverse_lookup_table[p[7]]) | //p[7] gives the 8 most significant 8 bits of l (little endian)
       (char_reverse_lookup_table[p[6]] << 8) |
@@ -271,20 +224,7 @@ static unsigned long reverse_unsigned_long(unsigned long l) {
       (char_reverse_lookup_table[p[2]] << 40) |
       (char_reverse_lookup_table[p[1]] << 48) |
       (char_reverse_lookup_table[p[0]] << 56); //p[0] gives the 8 least significant bits of l
-}
-
-/*
-  static unsigned long reverse_unsigned_long3(unsigned long l) {
-  return (char_reverse_lookup_table[l & 0xff] << 56) |
-      (char_reverse_lookup_table[(l >> 8) & 0xff] << 48) |
-      (char_reverse_lookup_table[(l >> 16) & 0xff] << 40) |
-      (char_reverse_lookup_table[(l >> 24) & 0xff] << 32) |
-      (char_reverse_lookup_table[(l >> 32) & 0xff] << 24) |
-      (char_reverse_lookup_table[(l >> 40) & 0xff] << 16) |
-      (char_reverse_lookup_table[(l >> 48) & 0xff] << 8) |
-      (char_reverse_lookup_table[(l >> 56) & 0xff]);    
 } // reference: Bit Twiddling Hacks, by Sean Eron Anderson (seander@cs.stanford.edu).
-*/
 
 /*
 static const unsigned int unsigned_int_bitmask_with_beginning_ones_lookup_table[33] =
