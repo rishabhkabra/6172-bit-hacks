@@ -1,0 +1,11 @@
+== everybit beta grades ==
+
+Group: akashyap-rkabra
+Writeup (out of 5): 5
+Test Coverage (out of 10): 9.73684210526217
+Correctness (out of 15): 15
+Performance (out of 15): 13.6592701155676
+
+Bonus points for fastest beta (out of 5): 0
+
+Total (out of 45): 43.3961122208298
