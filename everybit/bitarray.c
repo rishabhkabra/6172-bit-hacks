@@ -143,7 +143,6 @@ inline static WORD single_one_bitmask(const size_t bit_index) {
   return (POSITIVE_ONE_WORD) << (WORD_SIZE_IN_BITS - 1 - (bit_index % WORD_SIZE_IN_BITS));
 }
 
-
 size_t bitarray_get_bit_sz(const bitarray_t *const bitarray) {
   return bitarray->bit_sz;
 }
@@ -225,34 +224,6 @@ static unsigned long reverse_unsigned_long(unsigned long l) {
       (char_reverse_lookup_table[p[1]] << 48) |
       (char_reverse_lookup_table[p[0]] << 56); //p[0] gives the 8 least significant bits of l
 } // reference: Bit Twiddling Hacks, by Sean Eron Anderson (seander@cs.stanford.edu).
-
-/*
-static const unsigned int unsigned_int_bitmask_with_beginning_ones_lookup_table[33] =
-{
-      0x0,
-      0x80000000, 0xc0000000, 0xe0000000, 0xf0000000, 
-      0xf8000000, 0xfc000000, 0xfe000000, 0xff000000, 
-      0xff800000, 0xffc00000, 0xffe00000, 0xfff00000, 
-      0xfff80000, 0xfffc0000, 0xfffe0000, 0xffff0000, 
-      0xffff8000, 0xffffc000, 0xffffe000, 0xfffff000, 
-      0xfffff800, 0xfffffc00, 0xfffffe00, 0xffffff00, 
-      0xffffff80, 0xffffffc0, 0xffffffe0, 0xfffffff0, 
-      0xfffffff8, 0xfffffffc, 0xfffffffe, 0xffffffff, 
-};
-
-static const unsigned int unsigned_int_bitmask_with_trailing_ones_lookup_table[33] = 
-{
-  0x0,
-  0x1, 0x3, 0x7, 0xf, 
-  0x1f, 0x3f, 0x7f, 0xff, 
-  0x1ff, 0x3ff, 0x7ff, 0xfff, 
-  0x1fff, 0x3fff, 0x7fff, 0xffff, 
-  0x1ffff, 0x3ffff, 0x7ffff, 0xfffff, 
-  0x1fffff, 0x3fffff, 0x7fffff, 0xffffff, 
-  0x1ffffff, 0x3ffffff, 0x7ffffff, 0xfffffff, 
-  0x1fffffff, 0x3fffffff, 0x7fffffff, 0xffffffff
-};
-*/
 
 static const unsigned long unsigned_long_bitmask_with_beginning_ones_lookup_table[65] = 
 {
@@ -412,7 +383,6 @@ static void bitarray_reverse_faster(bitarray_t * bitarray, size_t bit_offset, co
     }
     bitarray_reverse(bitarray, bit_offset2, bit_length2);}
 }
-
 
 void bitarray_rotate(bitarray_t *const bitarray, const size_t bit_offset, const size_t bit_length, const ssize_t bit_right_amount) {
   // Implements bitarray rotation via reversal algorithm:
