@@ -147,6 +147,15 @@ size_t bitarray_get_bit_sz(const bitarray_t *const bitarray) {
   return bitarray->bit_sz;
 }
 
+ /*
+ ///////////////
+ Note that the original bitarray representation gave us the bits in reverse;
+ we altered the representation to give us the bits in the orthodox left-to-right manner in
+ order for our bitarray_reverse_faster implementation (which assumes the orthodox representation)
+ to work.
+ //////////////
+ */
+
 inline bool bitarray_get(const bitarray_t *const bitarray, const size_t bit_index) {
   assert(bit_index < bitarray->bit_sz);
 
