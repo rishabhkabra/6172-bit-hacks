@@ -36,7 +36,7 @@
 
 // ********************************* Types **********************************
 
-#define WORD unsigned long
+#define WORD unsigned long // defines the word type in which our bits will be stored
 #define WORD_SIZE_IN_BYTES (sizeof(WORD))
 #define WORD_SIZE_IN_BITS (WORD_SIZE_IN_BYTES * 8)
 #define POSITIVE_ONE_WORD (1ULL)
@@ -54,7 +54,7 @@ struct bitarray {
   size_t bit_sz;
 
   // The underlying memory buffer that stores the bits in
-  // packed form (8 per byte).
+  // packed form.
   WORD *buf;
 };
 
@@ -96,23 +96,11 @@ struct bitarray {
 // 0 <= r < m.
 static size_t modulo(const ssize_t n, const size_t m);
 
-// Produces a mask which, when ANDed with a byte, retains only the
-// bit_index th byte.
-//
-// Example: bitmask(5) produces the byte 0b00100000.
-//
-// (Note that here the index is counted from right
-// to left, which is different from how we represent bitarrays in the
-// tests.  This function is only used by bitarray_get and bitarray_set,
-// however, so as long as you always use bitarray_get and bitarray_set
-// to access bits in your bitarray, this reverse representation should
-// not matter.
-
 
 // ******************************* Functions ********************************
 
 bitarray_t *bitarray_new(const size_t bit_sz) {
-  // Allocate an underlying buffer of ceil(bit_sz/8) bytes.
+  // Allocate an underlying buffer of ceil(bit_sz/WORD_SIZE_IN_BITS) bytes.
   WORD *const buf = (WORD *) calloc(WORD_SIZE_IN_BYTES, bit_sz / WORD_SIZE_IN_BITS + ((bit_sz % WORD_SIZE_IN_BITS == 0) ? 0 : 1));
   if (buf == NULL) {
     return NULL;
@@ -139,7 +127,11 @@ void bitarray_free(bitarray_t *const bitarray) {
   free(bitarray);
 }
 
+
 inline static WORD single_one_bitmask(const size_t bit_index) {
+// A helper function for bitarray_get and bitarray_set that returns
+// a WORD containing a single one. The returned bitmask is then used
+// to set or get an individual bit.
   return (POSITIVE_ONE_WORD) << (WORD_SIZE_IN_BITS - 1 - (bit_index % WORD_SIZE_IN_BITS));
 }
 
@@ -147,21 +139,12 @@ size_t bitarray_get_bit_sz(const bitarray_t *const bitarray) {
   return bitarray->bit_sz;
 }
 
- /*
- ///////////////
- Note that the original bitarray representation gave us the bits in reverse;
- we altered the representation to give us the bits in the orthodox left-to-right manner in
- order for our bitarray_reverse_faster implementation (which assumes the orthodox representation)
- to work.
- //////////////
- */
-
 inline bool bitarray_get(const bitarray_t *const bitarray, const size_t bit_index) {
   assert(bit_index < bitarray->bit_sz);
 
-  // We're storing bits in packed form, 8 per byte.  So to get the nth
-  // bit, we want to look at the (n mod 8)th bit of the (floor(n/8)th)
-  // byte.
+  // We're storing bits in packed form (in words). So to get the nth
+  // bit, we want to look at the (n mod WORD_SIZE_IN_BITS)th bit of the 
+  // (floor(n/WORD_SIZE_IN_BITS)th) word.
   //
   // In C, integer division is floored explicitly, so we can just do it to
   // get the byte; we then bitwise-and the byte with an appropriate mask
@@ -177,8 +160,9 @@ inline void bitarray_set(bitarray_t *const bitarray,
                   const bool value) {
   assert(bit_index < bitarray->bit_sz);
 
-  // We're storing bits in packed form, 8 per byte.  So to set the nth
-  // bit, we want to set the (n mod 8)th bit of the (floor(n/8)th) byte.
+  // We're storing bits in packed form (in words). So to set the nth
+  // bit, we want to look at the (n mod WORD_SIZE_IN_BITS)th bit of the 
+  // (floor(n/WORD_SIZE_IN_BITS)th) word.
   //
   // In C, integer division is floored explicitly, so we can just do it to
   // get the byte; we then bitwise-and the byte with an appropriate mask
@@ -195,7 +179,8 @@ static void bitarray_reverse(bitarray_t * bitarray, size_t bit_offset, const siz
   // Reverses the array of length bitarray_length beginning
   // at bitarray_start. Assumes bitarray_start + bitarray_length - 1
   // is the address to the last of element of the to-be-reversed array.
-
+  // This is a simplistic reversal algorithm that serves as a fallback
+  // option.
   assert(bit_offset + bit_length <= bitarray->bit_sz);
 
   if (bit_length <= 1) {
@@ -215,6 +200,10 @@ static void bitarray_reverse(bitarray_t * bitarray, size_t bit_offset, const siz
 
 static const unsigned long char_reverse_lookup_table[256] = 
 {
+  // Stores the reversed form of each possible byte.
+  // Unsigned longs are used only as a matter of convenience.
+  // Only the last 8 bits in each unsigned long are
+  // occupied.
 #define R2(n) n, n+2*64, n+1*64, n+3*64
 #define R4(n) R2(n), R2(n+2*16), R2(n+1*16), R2(n+3*16)
 #define R6(n) R4(n), R4(n+2*4), R4(n+1*4), R4(n+3*4)
@@ -222,7 +211,10 @@ static const unsigned long char_reverse_lookup_table[256] =
 }; // reference: Bit Twiddling Hacks, by Sean Eron Anderson (seander@cs.stanford.edu). Table definition suggested by Hallvard Furuseth.
 
 
-static unsigned long reverse_unsigned_long(unsigned long l) {    
+static unsigned long reverse_unsigned_long(unsigned long l) {
+  // Reverses an entire unsigned long by dividing it
+  // into bytes (ie, chars) and then using the lookup
+  // table defined above to identify each byte's reverse.
   unsigned char * p = (unsigned char *) &l;
   return (char_reverse_lookup_table[p[7]]) | //p[7] gives the 8 most significant 8 bits of l (little endian)
       (char_reverse_lookup_table[p[6]] << 8) |
@@ -236,6 +228,7 @@ static unsigned long reverse_unsigned_long(unsigned long l) {
 
 static const unsigned long unsigned_long_bitmask_with_beginning_ones_lookup_table[65] = 
 {
+  // Lookup table for bitmasks with [0...64] beginning ones.
   0x0, 
   0x8000000000000000, 0xc000000000000000, 0xe000000000000000, 0xf000000000000000, 
   0xf800000000000000, 0xfc00000000000000, 0xfe00000000000000, 0xff00000000000000, 
@@ -257,6 +250,7 @@ static const unsigned long unsigned_long_bitmask_with_beginning_ones_lookup_tabl
 
 static const unsigned long unsigned_long_bitmask_with_trailing_ones_lookup_table[65] = 
 {
+  // Lookup table for bitmasks with [0...64] trailing ones.
   0x0,
   0x1, 0x3, 0x7, 0xf, 
   0x1f, 0x3f, 0x7f, 0xff, 
