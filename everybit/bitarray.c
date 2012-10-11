@@ -272,6 +272,10 @@ static const unsigned long unsigned_long_bitmask_with_trailing_ones_lookup_table
 
 
 static void bitarray_reverse_faster(bitarray_t * bitarray, size_t bit_offset, const size_t bit_length) {
+  // A faster reversal algorithm that exploits the word-level
+  // representation of the bitarray. It reverses individual
+  // words at either end of the subarray, exchanges their
+  // positions, and proceeds inward in that manner.
 
   assert(bit_offset + bit_length <= bitarray->bit_sz);
 
@@ -281,14 +285,16 @@ static void bitarray_reverse_faster(bitarray_t * bitarray, size_t bit_offset, co
   }
 
   size_t leftexcess = WORD_SIZE_IN_BITS - (bit_offset % WORD_SIZE_IN_BITS); // range: [1,64]
-  WORD * leftword = bitarray->buf + bit_offset / WORD_SIZE_IN_BITS;
-  size_t rightexcess = (bit_offset + bit_length) % WORD_SIZE_IN_BITS;
+  // leftexcess is a measure of the number of bits in the leftmost word that need to be reversed and repositioned.
+  WORD * leftword = bitarray->buf + bit_offset / WORD_SIZE_IN_BITS; // leftmost word of the subarray
+  size_t rightexcess = (bit_offset + bit_length) % WORD_SIZE_IN_BITS; // desired range: [1:64]
+  // rightexcess is a measure of the number of bits in the rightmost word that need to be reversed and repositioned.
   if (rightexcess == 0) {
     rightexcess = WORD_SIZE_IN_BITS;
   }
-  WORD * rightword = bitarray->buf + (bit_offset + bit_length - 1) / WORD_SIZE_IN_BITS;
+  WORD * rightword = bitarray->buf + (bit_offset + bit_length - 1) / WORD_SIZE_IN_BITS; // rightmost word of the subarray
   
-  if (leftexcess < rightexcess) { //Case 1: subarray to be reversed is asymmetric and leftexcess < rightexcess
+  if (leftexcess < rightexcess) { //Case 1: subarray to be reversed is asymmetric and right-excessive
     WORD rightreplacement, left1replacement, left2replacement;
     rightreplacement = (*leftword & TRAILING_ONES_BITMASK(leftexcess)) << (rightexcess - leftexcess);
     rightreplacement |= (*(leftword+1) & BEGINNING_ONES_BITMASK(rightexcess - leftexcess)) >> (WORD_SIZE_IN_BITS - (rightexcess - leftexcess));
@@ -321,7 +327,7 @@ static void bitarray_reverse_faster(bitarray_t * bitarray, size_t bit_offset, co
     rightword--;
     }
 
-  } else if (leftexcess > rightexcess) { //Case 2: subarray to be reversed is asymmetric and leftexcess > rightexcess
+  } else if (leftexcess > rightexcess) { //Case 2: subarray to be reversed is asymmetric and left-excessive
     WORD leftreplacement, right1replacement, right2replacement;
       leftreplacement = (*rightword & BEGINNING_ONES_BITMASK(rightexcess)) >> (leftexcess - rightexcess);
       leftreplacement |= (*(rightword-1) & TRAILING_ONES_BITMASK(leftexcess - rightexcess)) << (WORD_SIZE_IN_BITS - (leftexcess - rightexcess));
